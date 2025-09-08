@@ -13,7 +13,7 @@ export function UploadPage({ onReady }) {
       const datasetName = files.map((f) => f.name).join(', ').slice(0, 80)
       const id = await saveDataset(datasetName, result)
       setLog(`Saved dataset #${id} with ${counts}`)
-      if (onReady) onReady()
+      if (onReady) onReady(id)
     } catch (e) {
       console.error(e)
       setLog('Failed to parse files.')

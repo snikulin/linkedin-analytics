@@ -1,5 +1,5 @@
 import React from 'react'
-import { getLatestDataset, getPosts } from '../../data/repo'
+import { getCurrentDataset, getPosts } from '../../data/repo'
 import { fmtInt, fmtPct } from '../../lib/format'
 
 export function LeaderboardsPage() {
@@ -8,7 +8,7 @@ export function LeaderboardsPage() {
 
   React.useEffect(() => {
     (async () => {
-      const ds = await getLatestDataset()
+      const ds = await getCurrentDataset()
       if (!ds) return
       const posts = await getPosts(ds.id)
       const norm = posts.map((p) => ({

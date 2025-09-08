@@ -1,5 +1,5 @@
 import React from 'react'
-import { getLatestDataset, getDaily, getPosts } from '../../data/repo'
+import { getCurrentDataset, getDaily, getPosts } from '../../data/repo'
 import { groupBy, toArray } from '../../lib/group'
 import { dayOfWeekIndex, dayOfWeekLabel } from '../../lib/dates'
 import { median } from '../../lib/stats'
@@ -12,7 +12,7 @@ export function TimingPage() {
 
   React.useEffect(() => {
     (async () => {
-      const ds = await getLatestDataset()
+      const ds = await getCurrentDataset()
       if (!ds) return
       const [daily, posts] = await Promise.all([getDaily(ds.id), getPosts(ds.id)])
 

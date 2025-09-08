@@ -4,6 +4,7 @@ import { OverviewPage } from '../features/dashboards/OverviewPage'
 import { TimingPage } from '../features/dashboards/TimingPage'
 import { ContentPage } from '../features/dashboards/ContentPage'
 import { LeaderboardsPage } from '../features/dashboards/LeaderboardsPage'
+import { getCurrentDatasetId } from '../data/repo'
 
 function NavLink({ label, onClick }) {
   return (
@@ -18,6 +19,14 @@ function NavLink({ label, onClick }) {
 
 export function App() {
   const [route, setRoute] = React.useState('upload')
+  
+  React.useEffect(() => {
+    // Check if we have a persisted dataset on initial load
+    const persistedDatasetId = getCurrentDatasetId()
+    if (persistedDatasetId) {
+      setRoute('overview')
+    }
+  }, [])
 
   return (
     <div className="min-h-full">

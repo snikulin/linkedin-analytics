@@ -1,5 +1,5 @@
 import React from 'react'
-import { getLatestDataset, getPosts, getDaily } from '../../data/repo'
+import { getCurrentDataset, getPosts, getDaily } from '../../data/repo'
 import { median } from '../../lib/stats'
 import { Chart } from '../../components/Chart'
 
@@ -9,7 +9,7 @@ export function OverviewPage() {
 
   React.useEffect(() => {
     (async () => {
-      const ds = await getLatestDataset()
+      const ds = await getCurrentDataset()
       if (!ds) return
       const [posts, daily] = await Promise.all([getPosts(ds.id), getDaily(ds.id)])
       const postsCount = posts.length
