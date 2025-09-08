@@ -73,26 +73,26 @@ export function ContentPage() {
 
   const Table = ({ rows }) => (
     <div className="rounded border border-slate-800 overflow-hidden">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm table-fixed">
         <thead className="bg-slate-900">
           <tr>
-            <th className="text-left px-3 py-2">Post</th>
-            <th className="text-left px-3 py-2 cursor-pointer hover:bg-slate-800" onClick={() => handleSort('postedAt')}>
+            <th className="text-left px-3 py-2 w-1/3">Post</th>
+            <th className="text-left px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/6" onClick={() => handleSort('postedAt')}>
               Posted At{getSortIndicator('postedAt')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800" onClick={() => handleSort('impressions')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('impressions')}>
               Impr{getSortIndicator('impressions')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800" onClick={() => handleSort('er')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('er')}>
               ER{getSortIndicator('er')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800" onClick={() => handleSort('likes')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('likes')}>
               Likes{getSortIndicator('likes')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800" onClick={() => handleSort('comments')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('comments')}>
               Comments{getSortIndicator('comments')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800" onClick={() => handleSort('reposts')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('reposts')}>
               Reposts{getSortIndicator('reposts')}
             </th>
           </tr>
@@ -100,11 +100,11 @@ export function ContentPage() {
         <tbody>
           {rows.map((r, i) => (
             <tr key={i} className="border-t border-slate-800">
-              <td className="px-3 py-2 truncate max-w-[300px]">
+              <td className="px-3 py-2 truncate max-w-[300px] w-[300px]">
                 {r.link ? (
-                  <a href={r.link} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline">{r.title}</a>
+                  <a href={r.link} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline truncate">{r.title}</a>
                 ) : (
-                  r.title
+                  <span className="truncate">{r.title}</span>
                 )}
               </td>
               <td className="px-3 py-2">
