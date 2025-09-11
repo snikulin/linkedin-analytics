@@ -6,7 +6,7 @@
     git
     nodejs_22
     nodePackages.npm
-    pnpm
+    bun
     nodePackages.dotenv-cli
   ];
 
@@ -21,62 +21,62 @@
   enterShell = ''
     echo "node: $(node -v)"
     echo "npm:  $(npm -v)"
-    command -v pnpm >/dev/null 2>&1 && echo "pnpm: $(pnpm -v)" || true
+    command -v bun >/dev/null 2>&1 && echo "bun: $(bun -v)" || true
   '';
 
   # Convenient tasks: list with `devenv tasks list`, run with `devenv tasks run <name>`
   tasks = {
     "app:install".exec = ''
-      if command -v pnpm >/dev/null 2>&1; then
-        pnpm install || pnpm i
+      if command -v bun >/dev/null 2>&1; then
+        bun install
       else
         npm ci || npm install
       fi
     '';
 
     "app:dev".exec = ''
-      if command -v pnpm >/dev/null 2>&1; then
-        pnpm dev
+      if command -v bun >/dev/null 2>&1; then
+        bun run dev
       else
         npm run dev
       fi
     '';
 
     "app:build".exec = ''
-      if command -v pnpm >/dev/null 2>&1; then
-        pnpm build
+      if command -v bun >/dev/null 2>&1; then
+        bun run build
       else
         npm run build
       fi
     '';
 
     "app:preview".exec = ''
-      if command -v pnpm >/dev/null 2>&1; then
-        pnpm preview
+      if command -v bun >/dev/null 2>&1; then
+        bun run preview
       else
         npm run preview
       fi
     '';
 
     "app:typecheck".exec = ''
-      if command -v pnpm >/dev/null 2>&1; then
-        pnpm typecheck
+      if command -v bun >/dev/null 2>&1; then
+        bun run typecheck
       else
         npm run typecheck
       fi
     '';
 
     "app:lint".exec = ''
-      if command -v pnpm >/dev/null 2>&1; then
-        pnpm lint
+      if command -v bun >/dev/null 2>&1; then
+        bun run lint
       else
         npm run lint
       fi
     '';
 
     "app:format".exec = ''
-      if command -v pnpm >/dev/null 2>&1; then
-        pnpm format
+      if command -v bun >/dev/null 2>&1; then
+        bun run format
       else
         npm run format
       fi

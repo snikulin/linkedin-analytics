@@ -2,6 +2,7 @@
   "name": "linkedin-analytics-pwa",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.2.21",
   "type": "module",
   "scripts": {
     "dev": "vite",
