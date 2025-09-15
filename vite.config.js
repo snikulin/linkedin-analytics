@@ -4,7 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production'
+  const base = process.env.GITHUB_PAGES ? '/linkedin-analytics/' : '/'
   return {
+    base,
     plugins: [
       react(),
       // Only enable PWA in production builds to avoid SW interference in dev
