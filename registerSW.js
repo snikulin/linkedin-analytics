@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/linkedin-analytics/sw.js', { scope: '/linkedin-analytics/' })})}

@@ -1,0 +1,1 @@
+{"name":"LinkedIn Analytics","short_name":"LI Analytics","description":"Private-first LinkedIn analytics (local PWA)","start_url":"/","display":"standalone","background_color":"#0f172a","theme_color":"#0f172a","lang":"en","scope":"/linkedin-analytics/","icons":[{"src":"favicon.svg","sizes":"any","type":"image/svg+xml"}]}
