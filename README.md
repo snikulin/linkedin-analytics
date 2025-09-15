@@ -1,163 +1,238 @@
 # LinkedIn Analytics — Local PWA
 
-Private-first analytics for LinkedIn export files. Runs fully in the browser as a PWA with no servers or external APIs. Upload your XLSX/ODS/CSV, map the columns, and explore dashboards for overview, timing, and content performance.
+Private-first analytics for LinkedIn export files. Runs fully in the browser as a PWA with no servers or external APIs. Upload your LinkedIn Page export files (XLS/XLSX/CSV) or try realistic sample data to explore comprehensive analytics dashboards.
+
+🔒 **100% Private**: All data processing happens client-side. No servers, no data transmission, no tracking.  
+📊 **Comprehensive Analytics**: Overview, timing strategy, and content intelligence with actionable insights.  
+🚀 **Sample Data**: Try the full experience with 120 realistic LinkedIn posts spanning 90 days.  
+📱 **PWA Ready**: Works offline, installable on desktop and mobile.
 
 ---
 
-## Technology Stack
+## ✨ Current Features
 
-- React + Vite: fast, lightweight build and DX (TypeScript optional).
-- shadcn/ui + Tailwind CSS: accessible, composable UI components.
-- Charts: ECharts (flexible, performant) — Recharts acceptable as fallback.
-- Compute: Web Worker + JS analytics (d3-array or Arquero) for group-bys, medians, and summaries. Optional DuckDB-WASM later for heavier workloads.
-- Storage: IndexedDB (via Dexie) for local persistence; export/import bundles (JSON; optional Arrow/Parquet in Phase 2).
-- PWA: Service Worker (Workbox via `vite-plugin-pwa`) for offline use and caching.
-  - Note: PWA is enabled only in production builds to avoid dev SW issues.
+### 🔄 Data Upload & Management
+- **Two-Path Upload Design**: Choose between sample data or real LinkedIn Page exports
+- **Privacy-First Interface**: Clear messaging about client-side processing with GitHub source link
+- **Data Replacement Warnings**: Alerts when uploading new data will replace existing analytics
+- **Clear Data Functionality**: Safe data deletion with confirmation dialogs
+- **LinkedIn Export Guide**: Official step-by-step instructions with screenshot for LinkedIn Pages
 
----
+### 🎲 Sample Data Generator
+- **120 Realistic Posts** across 90 days with proper statistical distributions
+- **5 Content Categories**: Professional insights, industry news, personal stories, job posts, company updates
+- **Realistic Engagement Patterns**: Weekday multipliers, content type variations, and proper ER distributions
+- **No External Links**: Privacy-focused sample data without real LinkedIn URLs
 
-## High-Level Architecture
+### 📊 Analytics Dashboards
 
-- UI Layer (React + shadcn/ui): routing, uploads, dashboards, mapping wizard, filters.
-- Compute Layer (Web Worker): JS-based analytics (d3-array/Arquero) for aggregations and stats; keeps the UI thread responsive. Optional DuckDB-WASM behind a feature flag.
-- Data Access: Dexie-based repository for datasets, schema mappings, and saved views; JSON/typed arrays in-memory; optional Arrow/Parquet only for export/import in Phase 2.
-- PWA Shell: service worker caches app shell and assets; offline-first with versioned cache; no network calls by default.
-- Export Pipeline: `html-to-image` for PNG, `jsPDF` for PDFs capturing applied filters and timestamps.
+#### Overview Dashboard
+- **Enhanced KPI Cards** with growth indicators and trend analysis
+- **Time Period Selector**: 7, 30, 60, 90-day views with dynamic insights
+- **Interactive Charts**: Impressions and engagement rate trends with drill-down capabilities
+- **Quick Insights Panel**: Automatically generated performance highlights
+- **Recent Activity Feed**: Latest posts with performance indicators
+- **Mobile Responsive**: Optimized for all screen sizes
 
-Data Flow
-1) User uploads file(s) → 2) Header promotion + column mapping → 3) Coercion and derived fields → 4) In-memory tables to Worker compute (d3-array/Arquero) → 5) Dashboards render charts/tables → 6) Save to IndexedDB and/or export bundle (JSON; optional Parquet + config).
+#### Timing Strategy Dashboard
+- **Statistical Confidence Analysis**: High/Medium/Low confidence indicators based on sample sizes
+- **Weekday vs Weekend Performance**: Comparative analysis with strategic recommendations
+- **Day-of-Week Optimization**: Detailed performance breakdown with actionable insights
+- **Content Intelligence**: 
+  - Performance by content type (Video, Newsletter, Jobs, Lists, External Links, etc.)
+  - Content length analysis (Short <200, Medium 200-500, Long 500-1000, Very Long 1000+)
+  - Emoji usage impact analysis (None, Light 1-2, Moderate 3-4, Heavy 5+)
+- **Strategic Recommendations**: AI-powered content strategy suggestions based on performance patterns
 
-Privacy & Offline
-- 100% local by default: no telemetry, no external requests, no LinkedIn API.
-- Optional consented features (future): model downloads for NLP classifiers — disabled by default.
+#### Content Performance Dashboard
+- **Content Type Analysis**: Performance breakdown by detected content categories
+- **Link Impact Analysis**: External vs LinkedIn vs no-link performance comparison
+- **Text Length Optimization**: Scatter plots and binned analysis of content length vs engagement
+- **Format Performance**: Comparison across different post formats
 
-Performance Targets
-- 300–1,500 posts and 90–180 daily rows load and render in <3s on modern laptops.
-- Memory safeguards with chunked parsing and typed arrays.
-
----
-
-## Functionality Overview
-
-Ingestion & Cleaning
-- Accept XLSX/ODS/CSV (SheetJS `xlsx`).
-- Auto-detect title/header rows; promote headers for inner-header sheets.
-- Column mapping UI for common LinkedIn fields (Impressions, Likes, Comments, Reposts, Engagement rate, Post title, Post link, Post type, Created date).
-- Robust parsing (numbers with commas/percent, dates, de-duplication).
-- Derived fields: ER recalculation, external-link flag, hashtag/mention flags, text length bins, DOW/Week/Month with Europe/Berlin default.
-
-Dashboards
-- Overview: KPI tiles (totals, medians), time series (impressions, ER) with 7-day MA and optional anomaly flags.
-- Timing: Day-of-week medians for impressions and ER; simple seasonality over weeks.
-- Content: ER and impressions by Content Type; text length vs ER scatter/bins; link vs no-link comparison and estimated penalty.
-- Experiments (Phase 2): hooks/emoji analysis; suggested experiments.
-- Reports: PNG/PDF export; weekly digest as a local export.
-
-Insight Cards (auto-generated, Phase 2)
-- Examples: link penalty, format performance, day-of-week strengths with guardrails for small samples.
+### 🏗️ Technical Architecture
+- **React + Vite**: Modern, fast development experience
+- **React Router**: Client-side navigation with URL-based routing
+- **Tailwind CSS**: Utility-first styling with responsive design
+- **ECharts Integration**: Interactive, performant data visualizations
+- **IndexedDB Storage**: Local data persistence via Dexie
+- **PWA Capabilities**: Service Worker for offline functionality (production builds)
 
 ---
 
-## Analytics Methods
+## 🚀 Getting Started
 
-- Medians and interquartile summaries for robust comparisons.
-- Bin-wise estimates for text length; optional LOWESS trend.
-- Group comparisons with sample-size badges and simple CIs.
-- Optional anomaly detection (STL/ESD) on daily metrics.
+### Prerequisites
+- Node.js 18+ 
+- npm or pnpm
 
-Metrics Dictionary
-- Impressions: total views.
-- Engagement rate (ER): (Likes + Comments + Reposts [+ Clicks if present]) / Impressions.
-- Link penalty: % delta for “has external link” vs baseline.
-- Share amplification: additional impressions per repost (approximate).
+### Installation
+```bash
+# Clone the repository
+git clone [repository-url]
+cd linkedin-analytics
 
----
+# Install dependencies
+npm install
+# or
+pnpm install
 
-## Project Plan
+# Start development server
+npm run dev
+# or
+pnpm dev
+```
 
-Sprint 1 — MVP (app shell + core dashboards)
-- Scaffold Vite + React app; configure Tailwind and shadcn/ui.
-- Enable PWA (vite-plugin-pwa) with offline app shell and assets.
-- File upload and parsing (SheetJS); header promotion and column mapping UI.
-- Data model with Dexie (datasets, mappings, derived fields, saved views skeleton).
-- Worker compute using d3-array/Arquero for medians, group-bys, and comparisons.
-- Dashboards: Overview, Timing, Content (medians, deltas, filters).
-- PNG/PDF export with applied filters and timestamps.
+### Using the Application
 
-Sprint 2 — Insights and depth
-- Enhanced content analysis with link penalty and length-vs-ER analysis.
-- Saved views (persisted filters/queries), shareable local bundle export/import.
-- Insight cards generation with thresholds and de-duplication logic.
-- Basic anomaly flags on daily series; data health panel (missing types, small-N).
+1. **Try Sample Data** (Recommended first step):
+   - Click "Generate Sample Data" to explore with 120 realistic posts
+   - Experience all analytics features without uploading real data
 
-Sprint 3 — Enrichment (optional)
-- Hashtags table and topic hints; lightweight content-type auto-classifier for blanks.
-- Seasonality heatmap; short-horizon forecast (optional).
-- Polishing: accessibility pass, color contrast, keyboard navigation, i18n.
+2. **Upload LinkedIn Page Data**:
+   - Must be a LinkedIn Page admin (not personal profile)
+   - Export from Page Analytics: Analytics → Content/Visitors/etc → Export button
+   - Upload the XLS file to analyze your actual performance
 
-Acceptance Criteria (MVP)
-- Upload XLSX/ODS/CSV → automatic header detection with manual override.
-- Metrics parity: totals/medians within 1–2% of source exports.
-- Dashboards render under 3s for target dataset sizes.
-- Link/no-link and content-type comparisons show medians, counts, and low-sample badges.
-- Exports mirror on-screen filters and include timestamps.
-- Zero network calls; data persisted in IndexedDB; project bundle export/import works.
-
-Risks & Mitigations
-- Browser memory/CPU: use Web Worker + typed arrays and chunked parsing.
-- Header edge cases (merged rows): manual override step in mapping wizard.
-- Small-N statistics: show counts and CIs; gate insights with thresholds.
-- Export fidelity: visual regression check for PNG/PDF on key dashboards.
-
-Open Questions
-- Max expected file size/count? Decide when to prompt “lite mode” vs full engine.
-- Charting choice: ECharts vs Recharts tradeoffs (interactivity vs footprint).
-- Classifier approach: regex rules vs tiny model; accuracy target and opt-in.
+3. **Explore Analytics**:
+   - **Overview**: Get high-level performance insights and trends
+   - **Timing**: Discover optimal posting times and content strategies  
+   - **Content**: Analyze what content types perform best
 
 ---
 
-## Proposed Repo Structure
+## 📈 LinkedIn Data Export Guide
 
+### ⚠️ Important Limitation
+LinkedIn analytics export is **only available for LinkedIn Pages** (company/organization pages), **not personal profiles**.
+
+### Export Process for LinkedIn Pages
+1. Access your Page admin view
+2. Click **Analytics** in the left menu
+3. Select data type: Content, Visitors, Followers, Search Appearances, Leads, Newsletters, or Competitors
+4. Click the **Export** button in the upper-right corner
+5. Select timeframe and click **Export**
+6. Download the XLS file and upload it to this application
+
+---
+
+## 🔒 Privacy & Security
+
+- **100% Client-Side Processing**: Your data never leaves your browser
+- **No Server Communication**: Zero network requests for data processing
+- **Local Storage Only**: Data stored in your browser's IndexedDB
+- **Open Source**: Full transparency - view the source code
+- **No Tracking**: No analytics, cookies, or user tracking
+- **Data Control**: Clear and export your data anytime
+
+---
+
+## 🏗️ Architecture & Technology
+
+### Frontend Stack
+- **React 18**: Modern React with hooks and concurrent features
+- **Vite**: Fast build tool and development server
+- **React Router 7**: Client-side routing and navigation
+- **Tailwind CSS**: Utility-first CSS framework
+- **ECharts**: Rich, interactive data visualizations
+
+### Data & Storage
+- **IndexedDB**: Browser-native database via Dexie
+- **Client-Side Parsing**: XLSX/CSV parsing with SheetJS
+- **Statistical Analysis**: Custom algorithms for engagement analysis
+- **Sample Data Generation**: Realistic LinkedIn-style data creation
+
+### PWA Features
+- **Service Worker**: Offline functionality (production only)
+- **Installable**: Add to home screen on mobile/desktop
+- **Responsive Design**: Works on all screen sizes
+- **Performance Optimized**: Fast loading and smooth interactions
+
+---
+
+## 📊 Analytics Capabilities
+
+### Metrics Calculated
+- **Engagement Rate**: (Likes + Comments + Reposts) / Impressions
+- **Content Type Detection**: Automatic categorization of post types
+- **Timing Analysis**: Day-of-week and time-based performance patterns
+- **Content Intelligence**: Length, emoji usage, and format analysis
+- **Statistical Confidence**: Sample size validation for reliable insights
+
+### Insights Generated
+- **Best Performing Days**: Optimal posting schedule recommendations
+- **Content Strategy**: What types of content work best for your audience
+- **Engagement Optimization**: Tactical recommendations for better performance
+- **Trend Analysis**: Growth patterns and performance changes over time
+
+---
+
+## 🛠️ Development
+
+### Local Development with devenv.sh
+```bash
+# Install Nix and devenv
+nix profile install github:cachix/devenv/latest
+
+# Enter development shell
+devenv shell
+
+# Available tasks
+devenv tasks list
+devenv tasks run app:dev
+devenv tasks run app:build
+```
+
+### Available Scripts
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run typecheck` - Run TypeScript checks
+
+### Project Structure
 ```
 /src
-  /app            # routes, layout, PWA shell
-  /components     # shadcn/ui wrappers, charts, tables
-  /features       # upload, mapping, dashboards, reports
-  /data           # Dexie schema, repositories, adapters
-  /workers        # compute worker, message contracts
-  /lib            # utils: dates, stats, coercion, formatters
-  /styles         # tailwind config and globals
+  /app            # Main app shell and routing
+  /components     # Reusable UI components
+  /features       # Feature modules (upload, dashboards)
+    /upload       # Upload page and sample data generator
+    /dashboards   # Analytics dashboard pages
+  /data           # Data layer (IndexedDB, repositories)
+  /lib            # Utilities (formatting, statistics)
+  /images         # Static assets and screenshots
 ```
 
 ---
 
-## Getting Started (dev)
+## 🤝 Contributing
 
-- Prereqs: Node 18+, pnpm or npm.
-- Create app: `pnpm create vite` (React) → add Tailwind and shadcn/ui.
-- Add PWA: `vite-plugin-pwa` with Workbox; configure cache and versioning.
-- Add data libs: `xlsx`, `dexie`, `d3-array` (or `arquero`), `html-to-image`, `jspdf`.
-- Optional (Phase 2): `duckdb-wasm`, `apache-arrow`, `parquet-wasm` for heavier datasets and Parquet bundles.
-- Run: `pnpm dev` for local, `pnpm build && pnpm preview` for PWA check.
-  - Tip: If you previously ran a PWA on `localhost:5173`, clear site data or unregister service workers in DevTools (Application → Service Workers) if the page appears stuck.
+This is a privacy-first, client-side application. All contributions should maintain:
+- Zero server dependencies
+- No external data transmission
+- Full client-side functionality
+- Privacy-by-design principles
 
-### Local Dev with devenv.sh
+---
 
-- Overview: This repo includes `devenv.nix` to provision a reproducible shell with Node.js 22, npm, pnpm, and dotenv support — fully local, no global Node required.
-- Install Nix: follow the official Nix installer for your OS.
-- Install devenv: `nix profile install github:cachix/devenv/latest` (or see devenv.sh docs).
-- Enter shell: run `devenv shell` in the project root.
-- What you get: Node 22 (`node -v`), npm, pnpm, `dotenv-cli`, and JavaScript language support.
-- .env support: `.env` files are auto-loaded (via `dotenv.enable = true` in `devenv.nix`).
-- Common commands inside the shell:
-  - Install deps: `pnpm install` (or `npm ci`)
-  - Start dev: `pnpm dev` (or `npm run dev`)
-  - Build: `pnpm build` and preview: `pnpm preview`
-- Tasks: list with `devenv tasks list`.
-  - `devenv tasks run app:install`
-  - `devenv tasks run app:dev`
-  - `devenv tasks run app:build`
-  - `devenv tasks run app:preview`
-  - `devenv tasks run app:typecheck` / `app:lint` / `app:format`
+## 📄 License
 
-No servers required. Everything runs locally in your browser.
+This project is licensed under the GNU General Public License v3.0. See `LICENSE` for full terms.
+
+---
+
+## 🔮 Roadmap
+
+### Current Status: ✅ MVP Complete
+- ✅ Privacy-first upload interface with sample data
+- ✅ Comprehensive analytics dashboards
+- ✅ Content intelligence and timing strategy
+- ✅ LinkedIn export guidance with screenshots
+- ✅ Mobile-responsive PWA architecture
+
+### Future Enhancements
+- 🔄 Advanced content classification
+- 📊 Competitor benchmarking
+- 🎯 A/B testing recommendations
+- 📈 Predictive performance modeling
+- 🔍 Hashtag and mention analysis
