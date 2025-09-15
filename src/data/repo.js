@@ -60,3 +60,16 @@ export async function getDaily(datasetId) {
   return db.daily.where('datasetId').equals(datasetId).toArray()
 }
 
+export async function getDatasets() {
+  return db.datasets.orderBy('createdAt').reverse().toArray()
+}
+
+export async function clearDatasets() {
+  await db.transaction('rw', db.datasets, db.posts, db.daily, async () => {
+    await db.datasets.clear()
+    await db.posts.clear()
+    await db.daily.clear()
+  })
+  setCurrentDatasetId(null)
+}
+

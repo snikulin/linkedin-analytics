@@ -1,6 +1,6 @@
 # LinkedIn Analytics — Local PWA
 
-Private-first analytics for LinkedIn export files. Runs fully in the browser as a PWA with no servers or external APIs. Upload your XLSX/ODS/CSV, map the columns, and explore dashboards for overview, timing, content performance, and leaderboards.
+Private-first analytics for LinkedIn export files. Runs fully in the browser as a PWA with no servers or external APIs. Upload your XLSX/ODS/CSV, map the columns, and explore dashboards for overview, timing, and content performance.
 
 ---
 
@@ -50,7 +50,6 @@ Dashboards
 - Overview: KPI tiles (totals, medians), time series (impressions, ER) with 7-day MA and optional anomaly flags.
 - Timing: Day-of-week medians for impressions and ER; simple seasonality over weeks.
 - Content: ER and impressions by Content Type; text length vs ER scatter/bins; link vs no-link comparison and estimated penalty.
-- Leaderboards: Top posts by impressions and ER; “silent killers” (high ER, low impressions); deep links to original posts.
 - Experiments (Phase 2): hooks/emoji analysis; suggested experiments.
 - Reports: PNG/PDF export; weekly digest as a local export.
 
@@ -86,7 +85,7 @@ Sprint 1 — MVP (app shell + core dashboards)
 - PNG/PDF export with applied filters and timestamps.
 
 Sprint 2 — Insights and depth
-- Leaderboards (Top N, “silent killers”), link penalty and length-vs-ER analysis.
+- Enhanced content analysis with link penalty and length-vs-ER analysis.
 - Saved views (persisted filters/queries), shareable local bundle export/import.
 - Insight cards generation with thresholds and de-duplication logic.
 - Basic anomaly flags on daily series; data health panel (missing types, small-N).

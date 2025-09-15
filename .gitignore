@@ -17,6 +17,7 @@ coverage/
 
 # Docker local data
 /data/
+/sample/
 
 # Nix / direnv
 result

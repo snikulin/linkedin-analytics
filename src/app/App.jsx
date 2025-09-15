@@ -4,7 +4,7 @@ import { UploadPage } from '../features/upload/UploadPage'
 import { OverviewPage } from '../features/dashboards/OverviewPage'
 import { TimingPage } from '../features/dashboards/TimingPage'
 import { ContentPage } from '../features/dashboards/ContentPage'
-import { LeaderboardsPage } from '../features/dashboards/LeaderboardsPage'
+
 import { getCurrentDatasetId } from '../data/repo'
 
 function NavLink({ to, label }) {
@@ -42,7 +42,7 @@ export function App() {
             <NavLink to="/overview" label="Overview" />
             <NavLink to="/timing" label="Timing" />
             <NavLink to="/content" label="Content" />
-            <NavLink to="/leaderboards" label="Leaderboards" />
+
           </div>
         </div>
       </header>
@@ -53,7 +53,7 @@ export function App() {
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/timing" element={<TimingPage />} />
           <Route path="/content" element={<ContentPage />} />
-          <Route path="/leaderboards" element={<LeaderboardsPage />} />
+
         </Routes>
       </main>
     </div>
