@@ -2,6 +2,7 @@ import React from 'react'
 import { parseFiles } from './parsing'
 import { saveDataset, getDatasets, clearDatasets } from '../../data/repo'
 import { generateSampleData } from './sampleDataGenerator'
+import exportGuideImg from '../../images/linkedin-export.png'
 
 export function UploadPage({ onReady }) {
   const [log, setLog] = React.useState('')
@@ -208,7 +209,7 @@ export function UploadPage({ onReady }) {
                 <div className="mt-4 bg-slate-800/50 rounded-lg p-4 border border-slate-600">
                   <p className="text-slate-300 text-sm mb-3">Look for the Export button in the upper-right corner of the analytics page:</p>
                   <img 
-                    src="/src/images/linkedin-export.png" 
+                    src={exportGuideImg} 
                     alt="LinkedIn Export button location in analytics interface"
                     className="w-full max-w-md mx-auto rounded border border-slate-500"
                   />
