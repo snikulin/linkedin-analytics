@@ -7,9 +7,8 @@ import './styles/index.css'
 const container = document.getElementById('root')
 createRoot(container).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <App />
     </BrowserRouter>
   </React.StrictMode>
 )
-
