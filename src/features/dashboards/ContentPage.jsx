@@ -5,13 +5,14 @@ import { fmtInt, fmtPct } from '../../lib/format'
 export function ContentPage() {
   const [posts, setPosts] = React.useState([])
   const [sortConfig, setSortConfig] = React.useState({ key: 'postedAt', direction: 'desc' })
+  const [timeFilter, setTimeFilter] = React.useState('all')
 
   React.useEffect(() => {
     (async () => {
       const ds = await getCurrentDataset()
       if (!ds) return
       const allPosts = await getPosts(ds.id)
-      
+
       // Normalize posts
       const normalizedPosts = allPosts.map((p) => ({
         title: p.title || '(untitled)',
@@ -23,10 +24,32 @@ export function ContentPage() {
         comments: p.comments || 0,
         reposts: p.reposts || 0,
       }));
-      
+
       setPosts(normalizedPosts)
     })()
   }, [])
+
+  const getCutoffDate = (filter) => {
+    const now = new Date()
+    switch (filter) {
+      case '7d':
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      case '14d':
+        return new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+      case '1month':
+        return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+      case 'all':
+      default:
+        return null
+    }
+  }
+
+  const filteredPosts = React.useMemo(() => {
+    if (timeFilter === 'all') return posts
+    const cutoff = getCutoffDate(timeFilter)
+    if (!cutoff) return posts
+    return posts.filter(post => post.postedAt && new Date(post.postedAt) >= cutoff)
+  }, [posts, timeFilter])
 
   const handleSort = (key) => {
     let direction = 'asc'
@@ -37,9 +60,9 @@ export function ContentPage() {
   }
 
   const sortedPosts = React.useMemo(() => {
-    if (!sortConfig.key) return posts
+    if (!sortConfig.key) return filteredPosts
 
-    return [...posts].sort((a, b) => {
+    return [...filteredPosts].sort((a, b) => {
       let aValue = a[sortConfig.key]
       let bValue = b[sortConfig.key]
 
@@ -62,7 +85,7 @@ export function ContentPage() {
       }
       return 0
     })
-  }, [posts, sortConfig])
+  }, [filteredPosts, sortConfig])
 
   const getSortIndicator = (columnKey) => {
     if (sortConfig.key === columnKey) {
@@ -122,11 +145,31 @@ export function ContentPage() {
     </div>
   )
 
+  const TimeFilterButton = ({ filter, label }) => (
+    <button
+      onClick={() => setTimeFilter(filter)}
+      className={`px-3 py-1 rounded text-sm ${
+        timeFilter === filter
+          ? 'bg-slate-600 text-white'
+          : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+      }`}
+    >
+      {label}
+    </button>
+  )
+
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-medium">Content Chronological View</h2>
       <section className="space-y-2">
-        <h3 className="font-medium">All Posts</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-400">Filter by time:</span>
+          <TimeFilterButton filter="7d" label="Past 7 days" />
+          <TimeFilterButton filter="14d" label="Past 14 days" />
+          <TimeFilterButton filter="1month" label="Past month" />
+          <TimeFilterButton filter="all" label="All time" />
+        </div>
+        <h3 className="font-medium">Posts ({sortedPosts.length})</h3>
         <Table rows={sortedPosts} />
       </section>
     </div>
