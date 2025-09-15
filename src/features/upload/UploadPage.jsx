@@ -84,7 +84,7 @@ export function UploadPage({ onReady }) {
               No data is sent to any servers or third parties.
             </p>
             <a
-              href="https://github.com/your-repo/linkedin-analytics"
+              href="https://github.com/snikulin/linkedin-analytics"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center text-blue-400 hover:text-blue-300 text-sm"
