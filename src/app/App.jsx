@@ -4,6 +4,7 @@ import { UploadPage } from '../features/upload/UploadPage'
 import { OverviewPage } from '../features/dashboards/OverviewPage'
 import { TimingPage } from '../features/dashboards/TimingPage'
 import { ContentPage } from '../features/dashboards/ContentPage'
+import { FollowersPage } from '../features/dashboards/FollowersPage'
 
 import { getCurrentDatasetId } from '../data/repo'
 
@@ -40,6 +41,7 @@ export function App() {
           <div className="flex gap-2 ml-auto">
             <NavLink to="/upload" label="Upload" />
             <NavLink to="/overview" label="Overview" />
+            <NavLink to="/followers" label="Followers" />
             <NavLink to="/timing" label="Timing" />
             <NavLink to="/content" label="Content" />
 
@@ -51,6 +53,7 @@ export function App() {
           <Route path="/" element={<RootRedirect />} />
           <Route path="/upload" element={<UploadPage onReady={() => navigate('/overview')} />} />
           <Route path="/overview" element={<OverviewPage />} />
+          <Route path="/followers" element={<FollowersPage />} />
           <Route path="/timing" element={<TimingPage />} />
           <Route path="/content" element={<ContentPage />} />
 

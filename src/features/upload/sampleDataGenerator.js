@@ -207,10 +207,143 @@ function generateDailyMetrics(date, posts) {
   }
 }
 
+function generateFollowersDaily(daysAgo) {
+  const date = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
+  const dateStr = date.toISOString().split('T')[0]
+
+  // Generate realistic follower growth with some randomness
+  // Base growth: 20-50 organic, 0-5 sponsored, 0-3 auto-invited
+  const organicBase = randomInt(20, 50)
+  const sponsoredBase = randomInt(0, 5)
+  const autoInvitedBase = randomInt(0, 3)
+
+  // Add some trend - more followers over time (simulating growth)
+  const growthMultiplier = Math.min(1 + (daysAgo / 365), 2) // Up to 2x growth over a year
+  const dayOfWeek = date.getDay()
+  const weekdayMultiplier = dayOfWeek >= 1 && dayOfWeek <= 5 ? 1.2 : 0.8 // More on weekdays
+
+  const organicFollowers = Math.round(organicBase * growthMultiplier * weekdayMultiplier)
+  const sponsoredFollowers = Math.round(sponsoredBase * growthMultiplier)
+  const autoInvitedFollowers = Math.round(autoInvitedBase * growthMultiplier)
+  const totalFollowers = organicFollowers + sponsoredFollowers + autoInvitedFollowers
+
+  return {
+    date: dateStr,
+    organicFollowers,
+    sponsoredFollowers,
+    autoInvitedFollowers,
+    totalFollowers
+  }
+}
+
+function generateFollowersDemographics() {
+  const demographics = []
+
+  // Location data (top locations)
+  const locations = [
+    { location: 'San Francisco Bay Area', count: randomInt(500, 700) },
+    { location: 'New York City Metropolitan Area', count: randomInt(250, 350) },
+    { location: 'London Area, United Kingdom', count: randomInt(250, 350) },
+    { location: 'Los Angeles Metropolitan Area', count: randomInt(130, 180) },
+    { location: 'Greater Boston', count: randomInt(90, 130) },
+    { location: 'Greater Bengaluru Area, India', count: randomInt(80, 120) },
+    { location: 'Moscow Metropolitan Area, Russia', count: randomInt(75, 110) },
+    { location: 'Greater Seattle Area', count: randomInt(55, 85) }
+  ]
+
+  locations.forEach(loc => {
+    demographics.push({
+      categoryType: 'location',
+      category: loc.location,
+      count: loc.count
+    })
+  })
+
+  // Job function data
+  const jobFunctions = [
+    { job_function: 'Engineering', count: randomInt(700, 900) },
+    { job_function: 'Business Development', count: randomInt(1000, 1300) },
+    { job_function: 'Operations', count: randomInt(300, 400) },
+    { job_function: 'Sales', count: randomInt(200, 300) },
+    { job_function: 'Information Technology', count: randomInt(200, 300) },
+    { job_function: 'Research', count: randomInt(180, 250) },
+    { job_function: 'Product Management', count: randomInt(160, 220) },
+    { job_function: 'Finance', count: randomInt(140, 200) }
+  ]
+
+  jobFunctions.forEach(jf => {
+    demographics.push({
+      categoryType: 'job_function',
+      category: jf.job_function,
+      count: jf.count
+    })
+  })
+
+  // Seniority data
+  const seniorities = [
+    { seniority: 'Senior', count: randomInt(1200, 1500) },
+    { seniority: 'Entry', count: randomInt(1100, 1400) },
+    { seniority: 'Director', count: randomInt(400, 550) },
+    { seniority: 'Owner', count: randomInt(400, 550) },
+    { seniority: 'Manager', count: randomInt(250, 350) },
+    { seniority: 'CXO', count: randomInt(300, 450) },
+    { seniority: 'VP', count: randomInt(180, 250) }
+  ]
+
+  seniorities.forEach(s => {
+    demographics.push({
+      categoryType: 'seniority',
+      category: s.seniority,
+      count: s.count
+    })
+  })
+
+  // Industry data
+  const industries = [
+    { industry: 'Software Development', count: randomInt(400, 600) },
+    { industry: 'IT Services and IT Consulting', count: randomInt(300, 450) },
+    { industry: 'Technology, Information and Internet', count: randomInt(180, 280) },
+    { industry: 'Higher Education', count: randomInt(180, 280) },
+    { industry: 'Financial Services', count: randomInt(130, 200) },
+    { industry: 'Venture Capital and Private Equity Principals', count: randomInt(160, 240) },
+    { industry: 'Business Consulting and Services', count: randomInt(110, 170) },
+    { industry: 'Research Services', count: randomInt(110, 170) }
+  ]
+
+  industries.forEach(ind => {
+    demographics.push({
+      categoryType: 'industry',
+      category: ind.industry,
+      count: ind.count
+    })
+  })
+
+  // Company size data
+  const companySizes = [
+    { company_size: '2-10', count: randomInt(700, 1000) },
+    { company_size: '11-50', count: randomInt(700, 1000) },
+    { company_size: '51-200', count: randomInt(400, 650) },
+    { company_size: '1001-5000', count: randomInt(300, 500) },
+    { company_size: '201-500', count: randomInt(250, 400) },
+    { company_size: '10001+', count: randomInt(600, 900) },
+    { company_size: '501-1000', count: randomInt(200, 350) }
+  ]
+
+  companySizes.forEach(cs => {
+    demographics.push({
+      categoryType: 'company_size',
+      category: cs.company_size,
+      count: cs.count
+    })
+  })
+
+  return demographics
+}
+
 export function generateSampleData() {
   const posts = []
   const contentTypes = Object.keys(SAMPLE_CONTENT_TEMPLATES)
-  
+
   // Distribution of content types for 120 posts
   const contentDistribution = [
     ...Array(50).fill('professional'),  // 42%
@@ -219,41 +352,41 @@ export function generateSampleData() {
     ...Array(10).fill('jobs'),          // 8%
     ...Array(5).fill('company')         // 4%
   ]
-  
+
   // Generate posts distributed over 90 days
   const postDates = []
-  
+
   // Create realistic posting pattern (more posts on weekdays)
   for (let day = 0; day < 90; day++) {
     const date = new Date(Date.now() - day * 24 * 60 * 60 * 1000)
     const dayOfWeek = date.getDay()
-    
+
     // Probability of posting based on day of week (higher rates to get 120 posts)
     let postProbability = 0.6 // base probability
     if (dayOfWeek >= 1 && dayOfWeek <= 5) postProbability = 1.2 // weekdays
     if (dayOfWeek === 2 || dayOfWeek === 4) postProbability = 1.5 // Tuesday/Thursday
-    
+
     // Sometimes post multiple times per day
     const maxPosts = Math.random() < 0.3 ? 2 : 1
-    
+
     for (let i = 0; i < maxPosts; i++) {
       if (Math.random() < postProbability) {
         postDates.push(day)
       }
     }
   }
-  
+
   // Trim to exactly 120 posts
   postDates.sort((a, b) => b - a) // Most recent first
   const selectedDates = postDates.slice(0, 120)
-  
+
   // Generate posts
   selectedDates.forEach((daysAgo, index) => {
     const contentType = contentDistribution[index % contentDistribution.length]
     const post = generatePost(daysAgo, contentType)
     posts.push(post)
   })
-  
+
   // Generate daily metrics for all 90 days
   const daily = []
   for (let day = 0; day < 90; day++) {
@@ -261,20 +394,37 @@ export function generateSampleData() {
     const dayMetrics = generateDailyMetrics(date, posts)
     daily.push(dayMetrics)
   }
-  
+
+  // Generate followers data for 90 days
+  const followersDaily = []
+  for (let day = 0; day < 90; day++) {
+    const followersDay = generateFollowersDaily(day)
+    followersDaily.push(followersDay)
+  }
+
+  // Generate followers demographics
+  const followersDemographics = generateFollowersDemographics()
+
   // Sort posts by date (newest first)
   posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-  
+
   // Sort daily metrics by date (newest first)
   daily.sort((a, b) => new Date(b.date) - new Date(a.date))
-  
+
+  // Sort followers daily by date (newest first)
+  followersDaily.sort((a, b) => new Date(b.date) - new Date(a.date))
+
   return {
     posts,
     daily,
+    followersDaily,
+    followersDemographics,
     metadata: {
       generated: new Date().toISOString(),
       postCount: posts.length,
       dailyCount: daily.length,
+      followersDailyCount: followersDaily.length,
+      followersDemographicsCount: followersDemographics.length,
       dateRange: {
         start: daily[daily.length - 1]?.date,
         end: daily[0]?.date

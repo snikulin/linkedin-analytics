@@ -7,6 +7,16 @@ const KNOWN_POST_HEADERS = [
 const KNOWN_DAILY_HEADERS = [
   'date', 'impressions', 'clicks', 'reactions', 'comments', 'shares', 'video views', 'engagement rate'
 ]
+const KNOWN_FOLLOWERS_DAILY_HEADERS = [
+  'date', 'sponsored followers', 'organic followers', 'auto-invited followers', 'total followers'
+]
+const KNOWN_FOLLOWERS_DEMOGRAPHIC_HEADERS = [
+  'location', 'total followers',
+  'job function', 'total followers',
+  'seniority', 'total followers',
+  'industry', 'total followers',
+  'company size', 'total followers'
+]
 
 function normalizeHeader(h) {
   return String(h || '')
@@ -94,8 +104,19 @@ function sheetToRows(ws) {
 function classifySheet(headers) {
   const postScore = scoreHeaders(headers, KNOWN_POST_HEADERS)
   const dailyScore = scoreHeaders(headers, KNOWN_DAILY_HEADERS)
-  if (postScore >= dailyScore) return 'posts'
-  return 'daily'
+  const followersDailyScore = scoreHeaders(headers, KNOWN_FOLLOWERS_DAILY_HEADERS)
+  const followersDemographicScore = scoreHeaders(headers, KNOWN_FOLLOWERS_DEMOGRAPHIC_HEADERS)
+
+  const maxScore = Math.max(postScore, dailyScore, followersDailyScore, followersDemographicScore)
+
+  if (maxScore === 0) return 'unknown'
+
+  if (postScore === maxScore) return 'posts'
+  if (dailyScore === maxScore) return 'daily'
+  if (followersDailyScore === maxScore) return 'followers_daily'
+  if (followersDemographicScore === maxScore) return 'followers_demographics'
+
+  return 'unknown'
 }
 
 function normalizePost(rec) {
@@ -163,9 +184,63 @@ function normalizeDaily(rec) {
   }
 }
 
+function normalizeFollowersDaily(rec) {
+  const date = parseDate(rec['date'])
+  const sponsoredFollowers = parseNumber(rec['sponsored followers']) ?? 0
+  const organicFollowers = parseNumber(rec['organic followers']) ?? 0
+  const autoInvitedFollowers = parseNumber(rec['auto-invited followers']) ?? 0
+  const totalFollowers = parseNumber(rec['total followers']) ?? 0
+
+  return {
+    date,
+    sponsoredFollowers,
+    organicFollowers,
+    autoInvitedFollowers,
+    totalFollowers
+  }
+}
+
+function normalizeFollowersDemographics(rec, sheetName) {
+  // Determine the category type based on sheet name or headers
+  let categoryType = 'unknown'
+  let category = ''
+  let count = 0
+
+  if (sheetName.toLowerCase().includes('location')) {
+    categoryType = 'location'
+    category = rec['location'] || ''
+    count = parseNumber(rec['total followers']) ?? 0
+  } else if (sheetName.toLowerCase().includes('job function')) {
+    categoryType = 'job_function'
+    category = rec['job function'] || ''
+    count = parseNumber(rec['total followers']) ?? 0
+  } else if (sheetName.toLowerCase().includes('seniority')) {
+    categoryType = 'seniority'
+    category = rec['seniority'] || ''
+    count = parseNumber(rec['total followers']) ?? 0
+  } else if (sheetName.toLowerCase().includes('industry')) {
+    categoryType = 'industry'
+    category = rec['industry'] || ''
+    count = parseNumber(rec['total followers']) ?? 0
+  } else if (sheetName.toLowerCase().includes('company size')) {
+    categoryType = 'company_size'
+    category = rec['company size'] || ''
+    count = parseNumber(rec['total followers']) ?? 0
+  }
+
+  return {
+    categoryType,
+    category,
+    count
+  }
+}
+
 export async function parseFiles(files) {
   const posts = []
   const daily = []
+  const followersDaily = []
+  const followersDemographics = []
+
   for (const file of files) {
     const ab = await file.arrayBuffer()
     const wb = XLSX.read(ab, { type: 'array', cellDates: true, cellNF: false, cellText: false })
@@ -176,10 +251,19 @@ export async function parseFiles(files) {
       const kind = classifySheet(headers)
       if (kind === 'posts') {
         for (const rec of data) posts.push(normalizePost(rec))
-      } else {
+      } else if (kind === 'daily') {
         for (const rec of data) daily.push(normalizeDaily(rec))
+      } else if (kind === 'followers_daily') {
+        for (const rec of data) followersDaily.push(normalizeFollowersDaily(rec))
+      } else if (kind === 'followers_demographics') {
+        for (const rec of data) {
+          const normalized = normalizeFollowersDemographics(rec, sheetName)
+          if (normalized.categoryType !== 'unknown') {
+            followersDemographics.push(normalized)
+          }
+        }
       }
     }
   }
-  return { posts, daily }
+  return { posts, daily, followersDaily, followersDemographics }
 }

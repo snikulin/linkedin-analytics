@@ -2,18 +2,61 @@ import { db } from './db'
 
 const CURRENT_DATASET_KEY = 'linkedin-analytics-current-dataset-id'
 
-export async function saveDataset(name, { posts = [], daily = [] }) {
-  const datasetId = await db.transaction('rw', db.datasets, db.posts, db.daily, async () => {
-    const id = await db.datasets.add({ name, createdAt: new Date().toISOString() })
+export async function saveDataset(name, { posts = [], daily = [], followersDaily = [], followersDemographics = [] }, isSampleData = false) {
+  const datasetId = await db.transaction('rw', db.datasets, db.posts, db.daily, db.followersDaily, db.followersDemographics, async () => {
+    let id
+
+    if (isSampleData) {
+      // For sample data, always create a new dataset and clear existing data
+      id = await db.datasets.add({ name, createdAt: new Date().toISOString() })
+    } else {
+      // For regular uploads, try to update existing dataset or create new one
+      const existingDataset = await db.datasets.orderBy('id').last()
+      if (existingDataset) {
+        id = existingDataset.id
+        // Update the dataset name and timestamp
+        await db.datasets.update(id, { name, createdAt: new Date().toISOString() })
+      } else {
+        id = await db.datasets.add({ name, createdAt: new Date().toISOString() })
+      }
+    }
+
+    // Only save data types that have content
     if (posts.length) {
+      if (!isSampleData) {
+        // Clear existing posts for this dataset before adding new ones
+        await db.posts.where('datasetId').equals(id).delete()
+      }
       await db.posts.bulkAdd(posts.map((p) => ({ ...p, datasetId: id })))
     }
+
     if (daily.length) {
+      if (!isSampleData) {
+        // Clear existing daily data for this dataset before adding new ones
+        await db.daily.where('datasetId').equals(id).delete()
+      }
       await db.daily.bulkAdd(daily.map((d) => ({ ...d, datasetId: id })))
     }
+
+    if (followersDaily.length) {
+      if (!isSampleData) {
+        // Clear existing followers daily data for this dataset before adding new ones
+        await db.followersDaily.where('datasetId').equals(id).delete()
+      }
+      await db.followersDaily.bulkAdd(followersDaily.map((f) => ({ ...f, datasetId: id })))
+    }
+
+    if (followersDemographics.length) {
+      if (!isSampleData) {
+        // Clear existing followers demographics for this dataset before adding new ones
+        await db.followersDemographics.where('datasetId').equals(id).delete()
+      }
+      await db.followersDemographics.bulkAdd(followersDemographics.map((f) => ({ ...f, datasetId: id })))
+    }
+
     return id
   })
-  
+
   // Persist the dataset ID
   setCurrentDatasetId(datasetId)
   return datasetId
@@ -60,15 +103,27 @@ export async function getDaily(datasetId) {
   return db.daily.where('datasetId').equals(datasetId).toArray()
 }
 
+export async function getFollowersDaily(datasetId) {
+  if (!datasetId) return []
+  return db.followersDaily.where('datasetId').equals(datasetId).toArray()
+}
+
+export async function getFollowersDemographics(datasetId) {
+  if (!datasetId) return []
+  return db.followersDemographics.where('datasetId').equals(datasetId).toArray()
+}
+
 export async function getDatasets() {
   return db.datasets.orderBy('createdAt').reverse().toArray()
 }
 
 export async function clearDatasets() {
-  await db.transaction('rw', db.datasets, db.posts, db.daily, async () => {
+  await db.transaction('rw', db.datasets, db.posts, db.daily, db.followersDaily, db.followersDemographics, async () => {
     await db.datasets.clear()
     await db.posts.clear()
     await db.daily.clear()
+    await db.followersDaily.clear()
+    await db.followersDemographics.clear()
   })
   setCurrentDatasetId(null)
 }

@@ -8,10 +8,12 @@ db.version(1).stores({
   views: '++id,name',
 })
 
-db.version(2).stores({
+db.version(3).stores({
   datasets: '++id,name,createdAt',
   mappings: '++id,datasetId',
   views: '++id,name',
   posts: '++id,datasetId',
   daily: '++id,datasetId',
+  followersDaily: '++id,datasetId',
+  followersDemographics: '++id,datasetId',
 })

@@ -23,7 +23,7 @@ export function UploadPage({ onReady }) {
     setLog('Parsing...')
     try {
       const result = await parseFiles(files)
-      const counts = `${result.posts.length} posts, ${result.daily.length} daily rows`
+      const counts = `${result.posts.length} posts, ${result.daily.length} daily rows, ${result.followersDaily.length} followers daily, ${result.followersDemographics.length} followers demographics`
       setLog(`Parsed: ${counts}. Saving...`)
       const datasetName = files.map((f) => f.name).join(', ').slice(0, 80)
       const id = await saveDataset(datasetName, result)
@@ -40,9 +40,9 @@ export function UploadPage({ onReady }) {
     setLog('Generating sample data...')
     try {
       const result = generateSampleData()
-      const counts = `${result.posts.length} posts, ${result.daily.length} daily rows`
+      const counts = `${result.posts.length} posts, ${result.daily.length} daily rows, ${result.followersDaily.length} followers daily, ${result.followersDemographics.length} followers demographics`
       setLog(`Generated: ${counts}. Saving...`)
-      const id = await saveDataset('LinkedIn Analytics Demo Data', result)
+      const id = await saveDataset('LinkedIn Analytics Demo Data', result, true) // true = isSampleData
       setLog(`Saved sample dataset #${id} with ${counts}`)
       await checkExistingData()
       if (onReady) onReady(id)
