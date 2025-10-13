@@ -1,5 +1,5 @@
 import React from 'react'
-import { getCurrentDataset, getFollowersDaily, getFollowersDemographics } from '../../data/repo'
+import { getCurrentDataset, getFollowersDaily, getFollowersDemographics, getDatasetFreshness } from '../../data/repo'
 import { fmtInt } from '../../lib/format'
 import { Chart } from '../../components/Chart'
 
@@ -10,6 +10,8 @@ const TIME_PERIODS = {
   '90d': { label: '90 days', days: 90 },
   'all': { label: 'All time', days: null }
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000
 
 function MetricCard({ title, value, change, trend, icon, onClick, drillDownType }) {
   const isClickable = onClick && drillDownType
@@ -214,25 +216,45 @@ export function FollowersPage() {
   const [granularity, setGranularity] = React.useState('daily')
   const [followersDaily, setFollowersDaily] = React.useState([])
   const [followersDemographics, setFollowersDemographics] = React.useState([])
+  const [freshness, setFreshness] = React.useState(null)
 
-  const getCutoffDate = React.useCallback((period) => {
+  const referenceDate = React.useMemo(() => {
+    if (freshness?.date) {
+      return new Date(freshness.date)
+    }
+    return null
+  }, [freshness])
+
+  const getReferenceDate = React.useCallback(() => {
+    if (referenceDate) {
+      return new Date(referenceDate)
+    }
+    return new Date()
+  }, [referenceDate])
+
+  const getCutoffDate = React.useCallback((period, refDate) => {
     if (period === 'all') return null
-    const days = TIME_PERIODS[period].days
-    const now = new Date()
-    return new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
-  }, [])
+    const config = TIME_PERIODS[period]
+    if (!config?.days) return null
+    const reference = refDate ? new Date(refDate) : getReferenceDate()
+    return new Date(reference.getTime() - config.days * DAY_MS)
+  }, [getReferenceDate])
 
-  const filterDataByPeriod = React.useCallback((data, period, dateField = 'date') => {
-    const cutoff = getCutoffDate(period)
+  const filterDataByPeriod = React.useCallback((data, period, dateField = 'date', refDate) => {
+    const reference = refDate ? new Date(refDate) : getReferenceDate()
+    const cutoff = getCutoffDate(period, reference)
     if (!cutoff) return data
     return data.filter(item => {
-      const date = new Date(item[dateField])
-      return date >= cutoff
+      const value = item[dateField]
+      if (!value) return false
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return false
+      return date >= cutoff && date <= reference
     })
-  }, [getCutoffDate])
+  }, [getCutoffDate, getReferenceDate])
 
-  const calculateMetrics = React.useCallback((followersDaily, period) => {
-    const filteredFollowers = filterDataByPeriod(followersDaily, period, 'date')
+  const calculateMetrics = React.useCallback((followersDailyList, period, refDate) => {
+    const filteredFollowers = filterDataByPeriod(followersDailyList, period, 'date', refDate)
 
     const totalNewFollowers = filteredFollowers.reduce((acc, f) => acc + (f.totalFollowers || 0), 0)
     const organicFollowers = filteredFollowers.reduce((acc, f) => acc + (f.organicFollowers || 0), 0)
@@ -255,62 +277,71 @@ export function FollowersPage() {
     (async () => {
       const ds = await getCurrentDataset()
       if (!ds) return
-      const [followersDailyData, followersDemographicsData] = await Promise.all([
+      const [followersDailyData, followersDemographicsData, freshnessInfo] = await Promise.all([
         getFollowersDaily(ds.id),
-        getFollowersDemographics(ds.id)
+        getFollowersDemographics(ds.id),
+        getDatasetFreshness(ds.id),
       ])
 
-      // Calculate current period metrics
-      const currentMetrics = calculateMetrics(followersDailyData, timePeriod)
+      setFreshness(freshnessInfo)
+
+      const reference = freshnessInfo?.date
+        ? new Date(freshnessInfo.date)
+        : (referenceDate ? new Date(referenceDate) : new Date())
+
+      const currentMetrics = calculateMetrics(followersDailyData, timePeriod, reference)
       setMetrics(currentMetrics)
 
-      // Calculate previous period metrics for comparison
-      const currentDays = TIME_PERIODS[timePeriod].days
+      const currentDays = TIME_PERIODS[timePeriod]?.days
       if (currentDays) {
-        const previousCutoff = new Date(Date.now() - currentDays * 2 * 24 * 60 * 60 * 1000)
-        const currentCutoff = new Date(Date.now() - currentDays * 24 * 60 * 60 * 1000)
+        const currentStart = getCutoffDate(timePeriod, reference)
+        if (currentStart) {
+          const previousStart = new Date(currentStart.getTime() - currentDays * DAY_MS)
 
-        const previousFollowers = followersDailyData.filter(f => {
-          const date = new Date(f.date)
-          return date >= previousCutoff && date < currentCutoff
-        })
+          const previousFollowers = followersDailyData.filter((f) => {
+            if (!f.date) return false
+            const date = new Date(f.date)
+            if (Number.isNaN(date.getTime())) return false
+            return date >= previousStart && date < currentStart
+          })
 
-        const prevMetrics = calculateMetrics(previousFollowers, 'all')
-        setPreviousMetrics(prevMetrics)
+          const prevMetrics = calculateMetrics(previousFollowers, 'all', reference)
+          setPreviousMetrics(prevMetrics)
+        } else {
+          setPreviousMetrics(null)
+        }
       } else {
         setPreviousMetrics(null)
       }
 
-      setFollowersDaily(filterDataByPeriod(followersDailyData, timePeriod, 'date'))
+      const filteredDaily = filterDataByPeriod(followersDailyData, timePeriod, 'date', reference)
+      setFollowersDaily(filteredDaily)
       setFollowersDemographics(followersDemographicsData)
 
-      // Build time series from followers daily data
-      let chartData = filterDataByPeriod(followersDailyData, timePeriod, 'date')
+      let chartData = filteredDaily
         .filter((d) => d.date)
         .sort((a, b) => new Date(a.date) - new Date(b.date))
 
-      // Aggregate data based on granularity
       if (granularity === 'weekly') {
         chartData = aggregateFollowersByWeek(chartData)
       } else if (granularity === 'monthly') {
         chartData = aggregateFollowersByMonth(chartData)
       }
 
+      const baseYear = reference ? reference.getFullYear() : new Date().getFullYear()
       const x = chartData.map((d) => {
         if (granularity === 'weekly') {
           const date = new Date(d.date)
-          // Show compact format: "Sep 30" or "Sep 30 25" for different years
           const month = date.toLocaleDateString('en-US', { month: 'short' })
           const day = date.getDate()
           const year = date.getFullYear()
-          const currentYear = new Date().getFullYear()
 
-          if (year !== currentYear) {
+          if (year !== baseYear) {
             return `${month} ${day} ${String(year).slice(-2)}`
-          } else {
-            return `${month} ${day}`
           }
-        } else if (granularity === 'monthly') {
+          return `${month} ${day}`
+        }
+        if (granularity === 'monthly') {
           const date = new Date(d.date)
           return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
         }
@@ -322,7 +353,7 @@ export function FollowersPage() {
       const total = chartData.map((d) => d.totalFollowers || 0)
       setSeries({ x, organic, sponsored, autoInvited, total })
     })()
-  }, [timePeriod, granularity, calculateMetrics, filterDataByPeriod])
+  }, [timePeriod, granularity, calculateMetrics, filterDataByPeriod, referenceDate, getCutoffDate])
 
   const getChangeInfo = (current, previous) => {
     if (!previous || previous === 0) return { change: null, trend: 'neutral' }
@@ -342,6 +373,11 @@ export function FollowersPage() {
           <GranularitySelector granularity={granularity} onChange={setGranularity} />
         </div>
       </div>
+      {freshness?.display && (
+        <p className="text-xs text-slate-500">
+          Data current through {freshness.display}.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <MetricCard

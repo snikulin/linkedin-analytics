@@ -1,5 +1,5 @@
 import React from 'react'
-import { getCurrentDataset, getPosts } from '../../data/repo'
+import { getCurrentDataset, getPosts, getDatasetFreshness } from '../../data/repo'
 import { fmtInt, fmtPct } from '../../lib/format'
 import { Chart } from '../../components/Chart'
 import { deriveContentType, bucketizeContentType } from '../../lib/contentClassification'
@@ -17,14 +17,33 @@ export function ContentPage() {
   const [sortConfig, setSortConfig] = React.useState({ key: 'postedAt', direction: 'desc' })
   const [timeFilter, setTimeFilter] = React.useState('all')
   const [contentTypeFilter, setContentTypeFilter] = React.useState('all')
+  const [freshness, setFreshness] = React.useState(null)
+
+  const referenceDate = React.useMemo(() => {
+    if (freshness?.date) {
+      return new Date(freshness.date)
+    }
+    return null
+  }, [freshness])
+
+  const getReferenceDate = React.useCallback(() => {
+    if (referenceDate) {
+      return new Date(referenceDate.getTime())
+    }
+    return new Date()
+  }, [referenceDate])
 
   React.useEffect(() => {
     (async () => {
       const ds = await getCurrentDataset()
       if (!ds) return
-      const allPosts = await getPosts(ds.id)
+      const [allPosts, freshnessInfo] = await Promise.all([
+        getPosts(ds.id),
+        getDatasetFreshness(ds.id),
+      ])
 
-      // Normalize posts
+      setFreshness(freshnessInfo)
+
       const normalizedPosts = allPosts.map((p) => {
         const contentType = deriveContentType(p)
         return {
@@ -45,27 +64,34 @@ export function ContentPage() {
     })()
   }, [])
 
-  const getCutoffDate = (filter) => {
-    const now = new Date()
+  const getCutoffDate = React.useCallback((filter) => {
+    const reference = getReferenceDate()
+    const dayMs = 24 * 60 * 60 * 1000
     switch (filter) {
       case '7d':
-        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        return new Date(reference.getTime() - 7 * dayMs)
       case '14d':
-        return new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+        return new Date(reference.getTime() - 14 * dayMs)
       case '1month':
-        return new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+        return new Date(reference.getFullYear(), reference.getMonth() - 1, reference.getDate())
       case 'all':
       default:
         return null
     }
-  }
+  }, [getReferenceDate])
 
   const timeFilteredPosts = React.useMemo(() => {
     if (timeFilter === 'all') return posts
     const cutoff = getCutoffDate(timeFilter)
     if (!cutoff) return posts
-    return posts.filter(post => post.postedAt && new Date(post.postedAt) >= cutoff)
-  }, [posts, timeFilter])
+    const reference = getReferenceDate()
+    return posts.filter(post => {
+      if (!post.postedAt) return false
+      const date = new Date(post.postedAt)
+      if (Number.isNaN(date.getTime())) return false
+      return date >= cutoff && date <= reference
+    })
+  }, [posts, timeFilter, getCutoffDate, getReferenceDate])
 
   const contentFilteredPosts = React.useMemo(() => {
     if (contentTypeFilter === 'all') return timeFilteredPosts
@@ -451,6 +477,11 @@ export function ContentPage() {
         <p className="text-sm text-slate-400 mt-1">
           Compare video versus regular posts, track mix over time, and surface standout content.
         </p>
+        {freshness?.display && (
+          <p className="text-xs text-slate-500 mt-2">
+            Data current through {freshness.display}.
+          </p>
+        )}
       </div>
 
       <section className="space-y-3">

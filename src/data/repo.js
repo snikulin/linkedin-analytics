@@ -93,6 +93,37 @@ export async function getCurrentDataset() {
   }
 }
 
+export async function getDatasetFreshness(datasetId) {
+  if (!datasetId) return null
+
+  const [posts, daily, followers] = await Promise.all([
+    db.posts.where('datasetId').equals(datasetId).toArray(),
+    db.daily.where('datasetId').equals(datasetId).toArray(),
+    db.followersDaily.where('datasetId').equals(datasetId).toArray(),
+  ])
+
+  let latest = null
+
+  const considerDate = (value) => {
+    if (!value) return
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return
+    if (!latest || date > latest) latest = date
+  }
+
+  posts.forEach((post) => considerDate(post.createdAt))
+  daily.forEach((row) => considerDate(row.date))
+  followers.forEach((row) => considerDate(row.date))
+
+  if (!latest) return null
+
+  return {
+    iso: latest.toISOString(),
+    date: latest,
+    display: latest.toLocaleDateString(),
+  }
+}
+
 export async function getPosts(datasetId) {
   if (!datasetId) return []
   return db.posts.where('datasetId').equals(datasetId).toArray()
@@ -127,4 +158,3 @@ export async function clearDatasets() {
   })
   setCurrentDatasetId(null)
 }
-

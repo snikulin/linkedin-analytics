@@ -1,5 +1,5 @@
 import React from 'react'
-import { getCurrentDataset, getPosts, getDaily } from '../../data/repo'
+import { getCurrentDataset, getPosts, getDaily, getDatasetFreshness } from '../../data/repo'
 import { median } from '../../lib/stats'
 import { fmtInt, fmtPct } from '../../lib/format'
 import { Chart } from '../../components/Chart'
@@ -11,6 +11,8 @@ const TIME_PERIODS = {
   '90d': { label: '90 days', days: 90 },
   'all': { label: 'All time', days: null }
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000
 
 function Modal({ isOpen, onClose, title, children }) {
   if (!isOpen) return null
@@ -455,26 +457,46 @@ export function OverviewPage() {
   const [insights, setInsights] = React.useState([])
   const [posts, setPosts] = React.useState([])
   const [drillDownModal, setDrillDownModal] = React.useState({ isOpen: false, metric: null })
+  const [freshness, setFreshness] = React.useState(null)
 
-  const getCutoffDate = React.useCallback((period) => {
+  const referenceDate = React.useMemo(() => {
+    if (freshness?.date) {
+      return new Date(freshness.date)
+    }
+    return null
+  }, [freshness])
+
+  const getReferenceDate = React.useCallback(() => {
+    if (referenceDate) {
+      return new Date(referenceDate.getTime())
+    }
+    return new Date()
+  }, [referenceDate])
+
+  const getCutoffDate = React.useCallback((period, refDate) => {
     if (period === 'all') return null
-    const days = TIME_PERIODS[period].days
-    const now = new Date()
-    return new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
-  }, [])
+    const config = TIME_PERIODS[period]
+    if (!config?.days) return null
+    const reference = refDate ? new Date(refDate) : getReferenceDate()
+    return new Date(reference.getTime() - config.days * DAY_MS)
+  }, [getReferenceDate])
 
-  const filterDataByPeriod = React.useCallback((data, period, dateField = 'date') => {
-    const cutoff = getCutoffDate(period)
+  const filterDataByPeriod = React.useCallback((data, period, dateField = 'date', refDate) => {
+    const reference = refDate ? new Date(refDate) : getReferenceDate()
+    const cutoff = getCutoffDate(period, reference)
     if (!cutoff) return data
     return data.filter(item => {
-      const date = new Date(item[dateField])
-      return date >= cutoff
+      const value = item[dateField]
+      if (!value) return false
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return false
+      return date >= cutoff && date <= reference
     })
-  }, [getCutoffDate])
+  }, [getCutoffDate, getReferenceDate])
 
-  const calculateMetrics = React.useCallback((posts, daily, period) => {
-    const filteredPosts = filterDataByPeriod(posts, period, 'createdAt')
-    const filteredDaily = filterDataByPeriod(daily, period, 'date')
+  const calculateMetrics = React.useCallback((posts, daily, period, refDate) => {
+    const filteredPosts = filterDataByPeriod(posts, period, 'createdAt', refDate)
+    const filteredDaily = filterDataByPeriod(daily, period, 'date', refDate)
     
     const postsCount = filteredPosts.length
     const impressions = filteredPosts.reduce((acc, p) => acc + (p.impressions || 0), 0)
@@ -524,41 +546,60 @@ export function OverviewPage() {
     (async () => {
       const ds = await getCurrentDataset()
       if (!ds) return
-      const [posts, daily] = await Promise.all([getPosts(ds.id), getDaily(ds.id)])
-      
-      // Calculate current period metrics
-      const currentMetrics = calculateMetrics(posts, daily, timePeriod)
+      const [postsData, dailyData, freshnessInfo] = await Promise.all([
+        getPosts(ds.id),
+        getDaily(ds.id),
+        getDatasetFreshness(ds.id),
+      ])
+
+      setFreshness(freshnessInfo)
+
+      const reference = freshnessInfo?.date
+        ? new Date(freshnessInfo.date)
+        : (referenceDate ? new Date(referenceDate) : new Date())
+
+      const currentMetrics = calculateMetrics(postsData, dailyData, timePeriod, reference)
       setMetrics(currentMetrics)
-      
-      // Calculate previous period metrics for comparison
-      const currentDays = TIME_PERIODS[timePeriod].days
+
+      const currentDays = TIME_PERIODS[timePeriod]?.days
+      let comparisonMetrics = previousMetrics
       if (currentDays) {
-        const previousCutoff = new Date(Date.now() - currentDays * 2 * 24 * 60 * 60 * 1000)
-        const currentCutoff = new Date(Date.now() - currentDays * 24 * 60 * 60 * 1000)
-        
-        const previousPosts = posts.filter(p => {
-          const date = new Date(p.createdAt)
-          return date >= previousCutoff && date < currentCutoff
-        })
-        const previousDaily = daily.filter(d => {
-          const date = new Date(d.date)
-          return date >= previousCutoff && date < currentCutoff
-        })
-        
-        const prevMetrics = calculateMetrics(previousPosts, previousDaily, 'all')
-        setPreviousMetrics(prevMetrics)
+        const currentStart = getCutoffDate(timePeriod, reference)
+        if (currentStart) {
+          const previousStart = new Date(currentStart.getTime() - currentDays * DAY_MS)
+
+          const previousPosts = postsData.filter((p) => {
+            if (!p.createdAt) return false
+            const date = new Date(p.createdAt)
+            if (Number.isNaN(date.getTime())) return false
+            return date >= previousStart && date < currentStart
+          })
+
+          const previousDaily = dailyData.filter((d) => {
+            if (!d.date) return false
+            const date = new Date(d.date)
+            if (Number.isNaN(date.getTime())) return false
+            return date >= previousStart && date < currentStart
+          })
+
+          const prevMetrics = calculateMetrics(previousPosts, previousDaily, 'all', reference)
+          setPreviousMetrics(prevMetrics)
+          comparisonMetrics = prevMetrics
+        } else {
+          setPreviousMetrics(null)
+          comparisonMetrics = null
+        }
       } else {
         setPreviousMetrics(null)
+        comparisonMetrics = null
       }
-      
-      // Generate insights
-      const filteredPosts = filterDataByPeriod(posts, timePeriod, 'createdAt')
-      const newInsights = generateInsights(currentMetrics, previousMetrics, filteredPosts)
+
+      const filteredPosts = filterDataByPeriod(postsData, timePeriod, 'createdAt', reference)
+      const newInsights = generateInsights(currentMetrics, comparisonMetrics, filteredPosts)
       setInsights(newInsights)
       setPosts(filteredPosts)
 
-      // Build time series from daily data
-      const filteredDaily = filterDataByPeriod(daily, timePeriod, 'date')
+      const filteredDaily = filterDataByPeriod(dailyData, timePeriod, 'date', reference)
       const sorted = filteredDaily
         .filter((d) => d.date)
         .slice()
@@ -568,7 +609,7 @@ export function OverviewPage() {
       const er = sorted.map((d) => (d.engagementRate != null ? +(d.engagementRate * 100).toFixed(2) : null))
       setSeries({ x, imp, er })
     })()
-  }, [timePeriod, calculateMetrics, filterDataByPeriod, generateInsights, previousMetrics])
+  }, [timePeriod, calculateMetrics, filterDataByPeriod, generateInsights, previousMetrics, referenceDate, getCutoffDate])
 
   const getChangeInfo = (current, previous) => {
     if (!previous || previous === 0) return { change: null, trend: 'neutral' }
@@ -593,6 +634,11 @@ export function OverviewPage() {
         <h2 className="text-lg font-medium">Overview</h2>
         <TimePeriodSelector period={timePeriod} onChange={setTimePeriod} />
       </div>
+      {freshness?.display && (
+        <p className="text-xs text-slate-500">
+          Data current through {freshness.display}.
+        </p>
+      )}
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <MetricCard

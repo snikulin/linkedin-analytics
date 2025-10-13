@@ -1,5 +1,5 @@
 import React from 'react'
-import { getCurrentDataset, getDaily, getPosts } from '../../data/repo'
+import { getCurrentDataset, getDaily, getPosts, getDatasetFreshness } from '../../data/repo'
 import { groupBy, toArray } from '../../lib/group'
 import { dayOfWeekIndex, dayOfWeekLabel } from '../../lib/dates'
 import { median } from '../../lib/stats'
@@ -366,12 +366,19 @@ export function TimingPage() {
   const [chartData, setChartData] = React.useState(null)
   const [insights, setInsights] = React.useState(null)
   const [posts, setPosts] = React.useState([])
+  const [freshness, setFreshness] = React.useState(null)
 
   React.useEffect(() => {
     (async () => {
       const ds = await getCurrentDataset()
       if (!ds) return
-      const [daily, posts] = await Promise.all([getDaily(ds.id), getPosts(ds.id)])
+      const [daily, posts, freshnessInfo] = await Promise.all([
+        getDaily(ds.id),
+        getPosts(ds.id),
+        getDatasetFreshness(ds.id),
+      ])
+
+      setFreshness(freshnessInfo)
 
       // DOW from daily for impressions
       const dailyGroups = toArray(groupBy(daily, (d) => dayOfWeekIndex(d.date)))
@@ -490,6 +497,11 @@ export function TimingPage() {
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-medium">Posting Timing Strategy</h2>
+      {freshness?.display && (
+        <p className="text-xs text-slate-500">
+          Data current through {freshness.display}.
+        </p>
+      )}
       
       {insights && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
