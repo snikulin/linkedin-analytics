@@ -81,6 +81,30 @@ const WEEKDAY_MULTIPLIERS = {
   6: 0.7  // Saturday
 }
 
+const SAMPLE_POST_FORMATS = {
+  professional: ['Text Only', 'Text Only', 'Document', 'External Link', 'Video', 'Video'],
+  industry: ['External Link', 'Text Only', 'Video', 'Document'],
+  personal: ['Text Only', 'Video', 'Text Only', 'Text Only'],
+  jobs: ['External Link', 'Text Only', 'Document'],
+  company: ['Document', 'Video', 'LinkedIn Link', 'Live Video'],
+}
+
+const FORMAT_IMPRESSION_MULTIPLIERS = {
+  'Video': 1.25,
+  'Live Video': 1.3,
+  'Document': 1.1,
+  'External Link': 0.9,
+  'LinkedIn Link': 0.95,
+}
+
+const FORMAT_ENGAGEMENT_MULTIPLIERS = {
+  'Video': 1.2,
+  'Live Video': 1.25,
+  'Document': 1.05,
+  'External Link': 0.85,
+  'LinkedIn Link': 0.9,
+}
+
 function randomBetween(min, max) {
   return Math.random() * (max - min) + min
 }
@@ -91,6 +115,15 @@ function randomInt(min, max) {
 
 function randomChoice(array) {
   return array[Math.floor(Math.random() * array.length)]
+}
+
+function randomSlug(length = 8) {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  let result = ''
+  for (let i = 0; i < length; i++) {
+    result += alphabet.charAt(Math.floor(Math.random() * alphabet.length))
+  }
+  return result
 }
 
 function generateRandomDate(daysAgo) {
@@ -144,6 +177,8 @@ function addContentVariation(title) {
 function generatePost(daysAgo, contentType) {
   const templates = SAMPLE_CONTENT_TEMPLATES[contentType]
   const patterns = ENGAGEMENT_PATTERNS[contentType]
+  const formats = SAMPLE_POST_FORMATS[contentType] || ['Text Only']
+  const format = randomChoice(formats)
   
   const title = addContentVariation(randomChoice(templates))
   const createdAt = generateRandomDate(daysAgo)
@@ -152,15 +187,25 @@ function generatePost(daysAgo, contentType) {
   
   // Generate performance metrics with day-of-week influence
   const baseImpressions = randomBetween(patterns.impressionRange[0], patterns.impressionRange[1])
-  const impressions = Math.round(baseImpressions * weekdayMultiplier)
+  const formatImpressionBoost = FORMAT_IMPRESSION_MULTIPLIERS[format] ?? 1
+  const impressions = Math.round(baseImpressions * weekdayMultiplier * formatImpressionBoost)
   
   const baseER = randomBetween(patterns.erRange[0], patterns.erRange[1])
-  const engagementRate = baseER * weekdayMultiplier
+  const formatEngagementBoost = FORMAT_ENGAGEMENT_MULTIPLIERS[format] ?? 1
+  const engagementRate = baseER * weekdayMultiplier * formatEngagementBoost
   
   const { likes, comments, reposts } = generateEngagementMetrics(impressions, engagementRate)
   
-  // No links in sample data
-  const link = null
+  let link = null
+  if (format === 'External Link') {
+    link = `https://example.com/article-${randomSlug(6)}`
+  } else if (format === 'LinkedIn Link') {
+    link = `https://www.linkedin.com/pulse/update-${randomSlug(8)}`
+  } else if (format === 'Video' || format === 'Live Video') {
+    link = `https://youtu.be/${randomSlug(11)}`
+  } else if (format === 'Document') {
+    link = `https://drive.example.com/file/${randomSlug(10)}`
+  }
   
   return {
     title,
@@ -170,7 +215,9 @@ function generatePost(daysAgo, contentType) {
     engagementRate,
     likes,
     comments,
-    reposts
+    reposts,
+    contentType: format,
+    type: format
   }
 }
 

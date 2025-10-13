@@ -5,6 +5,7 @@ import { dayOfWeekIndex, dayOfWeekLabel } from '../../lib/dates'
 import { median } from '../../lib/stats'
 import { fmtInt, fmtPct } from '../../lib/format'
 import { Chart } from '../../components/Chart'
+import { deriveContentType } from '../../lib/contentClassification'
 
 function PerformanceInsightCard({ title, value, subtitle, icon, color = 'text-slate-300' }) {
   return (
@@ -55,20 +56,6 @@ function WeekdayWeekendComparison({ weekdayStats, weekendStats }) {
 }
 
 function ContentTypeAnalysis({ posts }) {
-  const analyzeContentType = (post) => {
-    const title = (post.title || '').toLowerCase()
-    const hasLink = post.link && post.link.trim() !== ''
-    
-    // Detect specific content types
-    if (title.includes('video') || title.includes('credits:')) return 'Video'
-    if (title.includes('newsletter') || title.includes('issue is live')) return 'Newsletter'
-    if (title.includes('jobs') || title.includes('hiring') || title.includes('roles')) return 'Jobs'
-    if (title.match(/\d+\s+(companies|ways|tips|things|reasons)/)) return 'Lists'
-    if (hasLink && !post.link.includes('linkedin.com')) return 'External Link'
-    if (hasLink) return 'LinkedIn Link'
-    return 'Text Only'
-  }
-
   const analyzeContentLength = (post) => {
     const length = (post.title || '').length
     if (length > 1000) return 'Very Long (1000+)'
@@ -91,7 +78,7 @@ function ContentTypeAnalysis({ posts }) {
     const stats = {}
     
     posts.forEach(post => {
-      const type = analyzeContentType(post)
+      const type = deriveContentType(post)
       if (!stats[type]) {
         stats[type] = { count: 0, totalImpressions: 0, totalER: 0, validER: 0 }
       }

@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx'
+import { deriveContentType } from '../../lib/contentClassification'
 
 const KNOWN_POST_HEADERS = [
   'post title', 'post link', 'post type', 'posted by', 'created date',
@@ -121,10 +122,12 @@ function classifySheet(headers) {
 
 function normalizePost(rec) {
   const h = (k) => rec[k]
+  const rawPostType = h('post type') ?? h('type') ?? null
+  const rawContentType = h('content type') ?? null
   const out = {
     title: h('post title') ?? h('title') ?? null,
     link: h('post link') ?? h('link') ?? null,
-    type: h('post type') ?? h('type') ?? h('content type') ?? null,
+    type: rawPostType ?? rawContentType,
     createdAt: parseDate(h('created date') ?? h('date')),
     impressions: parseNumber(h('impressions')) ?? 0,
     likes: parseNumber(h('likes')) ?? 0,
@@ -139,6 +142,10 @@ function normalizePost(rec) {
     const numer = (out.likes || 0) + (out.comments || 0) + (out.reposts || 0)
     out.engagementRate = denom > 0 ? numer / denom : null
   }
+  out.contentType = deriveContentType({
+    title: out.title,
+    contentTypeColumn: rawContentType,
+  })
   return out
 }
 
