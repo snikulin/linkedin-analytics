@@ -33,8 +33,8 @@ Following this convention enables automated changelogs, semantic‑versioning, a
 
 ```
 devenv shell
-pnpm install
-pnpm dev
+bun install
+bun run dev
 ```
 
 The rest of the repo documentation (build, deployment, etc.) is available in `README.md` and other dedicated docs.

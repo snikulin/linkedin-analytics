@@ -63,8 +63,8 @@ Private-first analytics for LinkedIn export files. Runs fully in the browser as 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or pnpm
+- Node.js 18+
+- Bun (recommended) or npm
 
 ### Installation
 ```bash
@@ -73,14 +73,14 @@ git clone [repository-url]
 cd linkedin-analytics
 
 # Install dependencies
-npm install
+bun install
 # or
-pnpm install
+npm install
 
 # Start development server
-npm run dev
+bun run dev
 # or
-pnpm dev
+npm run dev
 ```
 
 ### Using the Application
