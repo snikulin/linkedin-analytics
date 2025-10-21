@@ -33,8 +33,27 @@ export function deriveContentType(post) {
       /\bjoin our team\b/,
     ]
 
+    const fundingPatterns = [
+      /\bfunding\b/,
+      /\braised?\b/,
+      /\bseries [a-z]\b/,
+      /\bseed round\b/,
+      /\bventure capital\b/,
+      /\bvc\b/,
+      /\binvestment\b/,
+      /\bround\b/,
+      /\bvaluation\b/,
+      /\bipo\b/,
+      /\bacquisition\b/,
+      /\bmerger\b/,
+    ]
+
     if (jobPatterns.some((pattern) => pattern.test(title))) {
       return 'Jobs'
+    }
+
+    if (fundingPatterns.some((pattern) => pattern.test(title))) {
+      return 'Funding'
     }
   }
 
@@ -48,5 +67,6 @@ export function isVideoContent(contentType) {
 export function bucketizeContentType(contentType) {
   if (contentType === 'Video') return 'Video'
   if (contentType === 'Jobs') return 'Jobs'
+  if (contentType === 'Funding') return 'Funding'
   return 'Regular'
 }

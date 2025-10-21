@@ -4,11 +4,12 @@ import { fmtInt, fmtPct } from '../../lib/format'
 import { Chart } from '../../components/Chart'
 import { deriveContentType, bucketizeContentType } from '../../lib/contentClassification'
 
-const BUCKET_ORDER = ['Video', 'Jobs', 'Regular']
+const BUCKET_ORDER = ['Video', 'Jobs', 'Funding', 'Regular']
 
 const SUMMARY_LABELS = {
   Video: 'Video Posts',
   Jobs: 'Jobs Posts',
+  Funding: 'Funding Posts',
   Regular: 'Regular Posts',
 }
 
@@ -98,6 +99,7 @@ export function ContentPage() {
     const filterMap = {
       video: 'Video',
       jobs: 'Jobs',
+      funding: 'Funding',
       regular: 'Regular',
     }
     const targetBucket = filterMap[contentTypeFilter]
@@ -168,6 +170,7 @@ export function ContentPage() {
         bucket,
         count: data.count,
         share: totalPosts ? (data.count / totalPosts) * 100 : 0,
+        totalImpressions: data.totalImpressions,
         avgImpressions: data.count ? data.totalImpressions / data.count : 0,
         avgER: data.validER ? data.totalER / data.validER : null,
       }
@@ -184,6 +187,7 @@ export function ContentPage() {
     bucket,
     count: 0,
     share: 0,
+    totalImpressions: 0,
     avgImpressions: 0,
     avgER: null,
   })
@@ -197,6 +201,7 @@ export function ContentPage() {
       type: entry.bucket,
       count: entry.count,
       share: entry.share,
+      totalImpressions: entry.totalImpressions,
       avgImpressions: entry.avgImpressions,
       avgER: entry.avgER,
     }))
@@ -497,6 +502,7 @@ export function ContentPage() {
           <ContentTypeFilterButton filter="all" label="All formats" />
           <ContentTypeFilterButton filter="video" label="Video only" />
           <ContentTypeFilterButton filter="jobs" label="Jobs only" />
+          <ContentTypeFilterButton filter="funding" label="Funding only" />
           <ContentTypeFilterButton filter="regular" label="Regular only" />
         </div>
       </section>
@@ -553,25 +559,27 @@ export function ContentPage() {
           <h3 className="font-medium">Content Type Breakdown</h3>
           <div className="rounded border border-slate-800 overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900">
-                <tr>
-                  <th className="text-left px-3 py-2">Type</th>
-                  <th className="text-right px-3 py-2">Posts</th>
-                  <th className="text-right px-3 py-2">Share</th>
-                  <th className="text-right px-3 py-2">Avg Impr</th>
-                  <th className="text-right px-3 py-2">Avg ER</th>
-                </tr>
-              </thead>
+               <thead className="bg-slate-900">
+                 <tr>
+                   <th className="text-left px-3 py-2">Type</th>
+                   <th className="text-right px-3 py-2">Posts</th>
+                   <th className="text-right px-3 py-2">Share</th>
+                   <th className="text-right px-3 py-2">Total Impr</th>
+                   <th className="text-right px-3 py-2">Avg Impr</th>
+                   <th className="text-right px-3 py-2">Avg ER</th>
+                 </tr>
+               </thead>
               <tbody>
-                {contentTypeStats.map((stat) => (
-                  <tr key={stat.type} className="border-t border-slate-800">
-                    <td className="px-3 py-2 text-slate-200">{stat.type}</td>
-                    <td className="px-3 py-2 text-right">{fmtInt(stat.count)}</td>
-                    <td className="px-3 py-2 text-right text-slate-400">{stat.share.toFixed(1)}%</td>
-                    <td className="px-3 py-2 text-right">{fmtInt(stat.avgImpressions)}</td>
-                    <td className="px-3 py-2 text-right">{fmtPct(stat.avgER)}</td>
-                  </tr>
-                ))}
+                 {contentTypeStats.map((stat) => (
+                   <tr key={stat.type} className="border-t border-slate-800">
+                     <td className="px-3 py-2 text-slate-200">{stat.type}</td>
+                     <td className="px-3 py-2 text-right">{fmtInt(stat.count)}</td>
+                     <td className="px-3 py-2 text-right text-slate-400">{stat.share.toFixed(1)}%</td>
+                     <td className="px-3 py-2 text-right">{fmtInt(stat.totalImpressions)}</td>
+                     <td className="px-3 py-2 text-right">{fmtInt(stat.avgImpressions)}</td>
+                     <td className="px-3 py-2 text-right">{fmtPct(stat.avgER)}</td>
+                   </tr>
+                 ))}
               </tbody>
             </table>
           </div>

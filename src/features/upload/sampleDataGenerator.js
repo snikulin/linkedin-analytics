@@ -57,10 +57,23 @@ const SAMPLE_CONTENT_TEMPLATES = {
     "Why we removed whiteboard coding from our interview process"
   ],
   
-  company: [
-    "Excited to announce our Series A: $15M to revolutionize developer tools",
-    "Celebrating 2 years since launching our platform - key metrics inside"
-  ]
+   company: [
+     "Excited to announce our Series A: $15M to revolutionize developer tools",
+     "Celebrating 2 years since launching our platform - key metrics inside"
+   ],
+
+   funding: [
+     "Weekly funding digest: $2.3B raised across 45 deals this week",
+     "OpenAI raises $6.6B at $157B valuation - largest AI funding round ever",
+     "Seed stage funding drops 15% YoY, but Series A rounds up 8%",
+     "European VC funding hits record $25B in Q3 2024",
+     "Fintech startup raises $50M Series B for global expansion",
+     "Climate tech funding reaches $10B milestone for 2024",
+     "AI infrastructure company secures $200M Series C at $2B valuation",
+     "Healthcare startup raises $75M to accelerate drug discovery platform",
+     "Web3 funding rebounds: $1.2B raised in October alone",
+     "Enterprise SaaS company closes $120M Series D at unicorn status"
+   ]
 }
 
 const ENGAGEMENT_PATTERNS = {
@@ -68,7 +81,8 @@ const ENGAGEMENT_PATTERNS = {
   industry: { erRange: [0.015, 0.035], impressionRange: [300, 900] },
   personal: { erRange: [0.025, 0.065], impressionRange: [500, 1400] },
   jobs: { erRange: [0.028, 0.055], impressionRange: [600, 1800] },
-  company: { erRange: [0.012, 0.025], impressionRange: [200, 600] }
+  company: { erRange: [0.012, 0.025], impressionRange: [200, 600] },
+  funding: { erRange: [0.020, 0.040], impressionRange: [350, 1000] }
 }
 
 const WEEKDAY_MULTIPLIERS = {
@@ -87,6 +101,7 @@ const SAMPLE_POST_FORMATS = {
   personal: ['Text Only', 'Video', 'Text Only', 'Text Only'],
   jobs: ['External Link', 'Text Only', 'Document'],
   company: ['Document', 'Video', 'LinkedIn Link', 'Live Video'],
+  funding: ['External Link', 'Text Only', 'Document', 'Video'],
 }
 
 const FORMAT_IMPRESSION_MULTIPLIERS = {
@@ -393,11 +408,12 @@ export function generateSampleData() {
 
   // Distribution of content types for 120 posts
   const contentDistribution = [
-    ...Array(50).fill('professional'),  // 42%
-    ...Array(30).fill('industry'),      // 25%
-    ...Array(25).fill('personal'),      // 21%
-    ...Array(10).fill('jobs'),          // 8%
-    ...Array(5).fill('company')         // 4%
+    ...Array(45).fill('professional'),  // 38%
+    ...Array(25).fill('industry'),      // 21%
+    ...Array(20).fill('personal'),      // 17%
+    ...Array(8).fill('jobs'),           // 7%
+    ...Array(12).fill('funding'),       // 10%
+    ...Array(10).fill('company')        // 8%
   ]
 
   // Generate posts distributed over 90 days
