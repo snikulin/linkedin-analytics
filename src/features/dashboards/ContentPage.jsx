@@ -4,12 +4,13 @@ import { fmtInt, fmtPct } from '../../lib/format'
 import { Chart } from '../../components/Chart'
 import { deriveContentType, bucketizeContentType } from '../../lib/contentClassification'
 
-const BUCKET_ORDER = ['Video', 'Jobs', 'Funding', 'Regular']
+const BUCKET_ORDER = ['Video', 'Jobs', 'Funding', 'Newsletter', 'Regular']
 
 const SUMMARY_LABELS = {
   Video: 'Video Posts',
   Jobs: 'Jobs Posts',
   Funding: 'Funding Posts',
+  Newsletter: 'Newsletter Posts',
   Regular: 'Regular Posts',
 }
 
@@ -100,6 +101,7 @@ export function ContentPage() {
       video: 'Video',
       jobs: 'Jobs',
       funding: 'Funding',
+      newsletter: 'Newsletter',
       regular: 'Regular',
     }
     const targetBucket = filterMap[contentTypeFilter]
@@ -499,11 +501,12 @@ export function ContentPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-slate-400">Content filter:</span>
-          <ContentTypeFilterButton filter="all" label="All formats" />
-          <ContentTypeFilterButton filter="video" label="Video only" />
-          <ContentTypeFilterButton filter="jobs" label="Jobs only" />
-          <ContentTypeFilterButton filter="funding" label="Funding only" />
-          <ContentTypeFilterButton filter="regular" label="Regular only" />
+           <ContentTypeFilterButton filter="all" label="All formats" />
+           <ContentTypeFilterButton filter="video" label="Video only" />
+           <ContentTypeFilterButton filter="jobs" label="Jobs only" />
+           <ContentTypeFilterButton filter="funding" label="Funding only" />
+           <ContentTypeFilterButton filter="newsletter" label="Newsletter only" />
+           <ContentTypeFilterButton filter="regular" label="Regular only" />
         </div>
       </section>
 

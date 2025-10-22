@@ -48,12 +48,21 @@ export function deriveContentType(post) {
       /\bmerger\b/,
     ]
 
+    const newsletterPatterns = [
+      /\bnew issue is live\b/,
+      /\bnewsletter\b/,
+    ]
+
     if (jobPatterns.some((pattern) => pattern.test(title))) {
       return 'Jobs'
     }
 
     if (fundingPatterns.some((pattern) => pattern.test(title))) {
       return 'Funding'
+    }
+
+    if (newsletterPatterns.some((pattern) => pattern.test(title))) {
+      return 'Newsletter'
     }
   }
 
@@ -68,5 +77,6 @@ export function bucketizeContentType(contentType) {
   if (contentType === 'Video') return 'Video'
   if (contentType === 'Jobs') return 'Jobs'
   if (contentType === 'Funding') return 'Funding'
+  if (contentType === 'Newsletter') return 'Newsletter'
   return 'Regular'
 }
