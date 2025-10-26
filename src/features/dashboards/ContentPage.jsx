@@ -165,9 +165,15 @@ export function ContentPage() {
     })
 
     const totalPosts = timeFilteredPosts.length
+    let totalImpressions = 0
+    let aggregateER = 0
+    let aggregateERCount = 0
 
     const entries = BUCKET_ORDER.map((bucket) => {
       const data = base[bucket]
+      totalImpressions += data.totalImpressions
+      aggregateER += data.totalER
+      aggregateERCount += data.validER
       return {
         bucket,
         count: data.count,
@@ -178,7 +184,16 @@ export function ContentPage() {
       }
     })
 
-    return { entries, totalPosts }
+    const totals = {
+      bucket: 'Total',
+      count: totalPosts,
+      share: totalPosts ? 100 : 0,
+      totalImpressions,
+      avgImpressions: totalPosts ? totalImpressions / totalPosts : 0,
+      avgER: aggregateERCount ? aggregateER / aggregateERCount : null,
+    }
+
+    return { entries, totalPosts, totals }
   }, [timeFilteredPosts])
 
   const summaryMap = React.useMemo(() => (
@@ -198,16 +213,31 @@ export function ContentPage() {
   const jobsSummary = summaryMap['Jobs'] || makeDefaultSummary('Jobs')
   const regularSummary = summaryMap['Regular'] || makeDefaultSummary('Regular')
 
-  const contentTypeStats = React.useMemo(() => (
-    bucketStats.entries.map((entry) => ({
+  const contentTypeStats = React.useMemo(() => {
+    const rows = bucketStats.entries.map((entry) => ({
       type: entry.bucket,
       count: entry.count,
       share: entry.share,
       totalImpressions: entry.totalImpressions,
       avgImpressions: entry.avgImpressions,
       avgER: entry.avgER,
+      isTotal: false,
     }))
-  ), [bucketStats])
+
+    if (bucketStats.totalPosts > 0) {
+      rows.push({
+        type: 'Total',
+        count: bucketStats.totals.count,
+        share: bucketStats.totals.share,
+        totalImpressions: bucketStats.totals.totalImpressions,
+        avgImpressions: bucketStats.totals.avgImpressions,
+        avgER: bucketStats.totals.avgER,
+        isTotal: true,
+      })
+    }
+
+    return rows
+  }, [bucketStats])
 
   const insights = React.useMemo(() => {
     const items = []
@@ -574,7 +604,10 @@ export function ContentPage() {
                </thead>
               <tbody>
                  {contentTypeStats.map((stat) => (
-                   <tr key={stat.type} className="border-t border-slate-800">
+                   <tr
+                     key={stat.type}
+                     className={`border-t border-slate-800 ${stat.isTotal ? 'bg-slate-900/60 font-semibold' : ''}`}
+                   >
                      <td className="px-3 py-2 text-slate-200">{stat.type}</td>
                      <td className="px-3 py-2 text-right">{fmtInt(stat.count)}</td>
                      <td className="px-3 py-2 text-right text-slate-400">{stat.share.toFixed(1)}%</td>
