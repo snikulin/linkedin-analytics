@@ -14,6 +14,8 @@ describe('normalizePost date handling', () => {
 
     const normalized = normalizePost(rec)
     expect(normalized.createdAt).toBe('2025-10-24T16:38:34.207Z')
+    expect(normalized.activityId).toBe('7387527938654691329')
+    expect(normalized.wordCount).toBeGreaterThan(0)
   })
 
   it('falls back to provided created date when ID missing', () => {
@@ -25,5 +27,6 @@ describe('normalizePost date handling', () => {
 
     const normalized = normalizePost(rec)
     expect(normalized.createdAt).toBe('2025-10-18T00:00:00.000Z')
+    expect(normalized.activityId).toBeNull()
   })
 })

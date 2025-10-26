@@ -5,6 +5,7 @@ import { OverviewPage } from '../features/dashboards/OverviewPage'
 import { TimingPage } from '../features/dashboards/TimingPage'
 import { ContentPage } from '../features/dashboards/ContentPage'
 import { FollowersPage } from '../features/dashboards/FollowersPage'
+import { PostDetailPage } from '../features/posts/PostDetailPage'
 
 import { getCurrentDatasetId } from '../data/repo'
 
@@ -56,6 +57,7 @@ export function App() {
           <Route path="/followers" element={<FollowersPage />} />
           <Route path="/timing" element={<TimingPage />} />
           <Route path="/content" element={<ContentPage />} />
+          <Route path="/posts/:postId" element={<PostDetailPage />} />
 
         </Routes>
       </main>

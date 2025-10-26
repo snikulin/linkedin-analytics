@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { getCurrentDataset, getPosts, getDatasetFreshness } from '../../data/repo'
 import { fmtInt, fmtPct } from '../../lib/format'
 import { Chart } from '../../components/Chart'
@@ -49,6 +50,7 @@ export function ContentPage() {
       const normalizedPosts = allPosts.map((p) => {
         const contentType = deriveContentType(p)
         return {
+          id: p.id,
           title: p.title || '(untitled)',
           link: p.link || null,
           postedAt: p.createdAt || null,
@@ -380,6 +382,20 @@ export function ContentPage() {
     return ''
   }
 
+  const formatDateTime = (value) => {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return '—'
+    return new Intl.DateTimeFormat('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date).replace(',', '')
+  }
+
   const Table = ({ rows }) => (
     <div className="rounded border border-slate-800 overflow-hidden">
       <table className="w-full text-sm table-fixed">
@@ -410,10 +426,21 @@ export function ContentPage() {
           {rows.map((r, i) => (
             <tr key={i} className="border-t border-slate-800">
               <td className="px-3 py-2 truncate max-w-[300px] w-[300px]">
-                {r.link ? (
-                  <a href={r.link} target="_blank" rel="noreferrer" className="text-sky-400 hover:underline truncate">{r.title}</a>
+                {r.id ? (
+                  <Link to={`/posts/${r.id}`} className="text-sky-400 hover:underline truncate">{r.title}</Link>
                 ) : (
                   <span className="truncate">{r.title}</span>
+                )}
+                {r.link && (
+                  <a
+                    href={r.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-slate-500 ml-2"
+                    aria-label="Open on LinkedIn"
+                  >
+                    ↗
+                  </a>
                 )}
                 {r.contentType && (
                   <div className="mt-1">
@@ -424,7 +451,7 @@ export function ContentPage() {
                 )}
               </td>
               <td className="px-3 py-2">
-                {r.postedAt ? new Date(r.postedAt).toLocaleDateString('de-DE') : '—'}
+                {formatDateTime(r.postedAt)}
               </td>
               <td className="px-3 py-2 text-right">{fmtInt(r.impressions)}</td>
               <td className="px-3 py-2 text-right">{fmtPct(r.er)}</td>
@@ -475,7 +502,14 @@ export function ContentPage() {
             <div key={index} className="rounded bg-slate-900/50 p-3 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  {post.link ? (
+                  {post.id ? (
+                    <Link
+                      to={`/posts/${post.id}`}
+                      className="text-sm text-sky-400 hover:underline truncate block"
+                    >
+                      {post.title}
+                    </Link>
+                  ) : post.link ? (
                     <a
                       href={post.link}
                       target="_blank"
@@ -486,6 +520,16 @@ export function ContentPage() {
                     </a>
                   ) : (
                     <span className="text-sm text-slate-200 truncate block">{post.title}</span>
+                  )}
+                  {post.link && (
+                    <a
+                      href={post.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-slate-500"
+                    >
+                      ↗
+                    </a>
                   )}
                   <div className="text-xs text-slate-400 mt-1">
                     {post.postedAt ? new Date(post.postedAt).toLocaleDateString() : '—'} • {fmtPct(post.er)}
