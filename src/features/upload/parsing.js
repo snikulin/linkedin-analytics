@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import { deriveContentType } from '../../lib/contentClassification'
+import { deriveActivityTimestamp } from '../../lib/linkedinIds'
 
 const KNOWN_POST_HEADERS = [
   'post title', 'post link', 'post type', 'posted by', 'created date',
@@ -124,11 +125,15 @@ function normalizePost(rec) {
   const h = (k) => rec[k]
   const rawPostType = h('post type') ?? h('type') ?? null
   const rawContentType = h('content type') ?? null
+  const rawLink = h('post link') ?? h('link') ?? null
+  const rawIdentifier = rawLink ?? h('post id') ?? h('id') ?? null
+  const activityTimestamp = deriveActivityTimestamp(rawIdentifier)
+  const fallbackDate = parseDate(h('created date') ?? h('date'))
   const out = {
     title: h('post title') ?? h('title') ?? null,
-    link: h('post link') ?? h('link') ?? null,
+    link: rawLink,
     type: rawPostType ?? rawContentType,
-    createdAt: parseDate(h('created date') ?? h('date')),
+    createdAt: activityTimestamp ?? fallbackDate,
     impressions: parseNumber(h('impressions')) ?? 0,
     likes: parseNumber(h('likes')) ?? 0,
     comments: parseNumber(h('comments')) ?? 0,
@@ -273,4 +278,8 @@ export async function parseFiles(files) {
     }
   }
   return { posts, daily, followersDaily, followersDemographics }
+}
+
+export const __uploadTestHelpers = {
+  normalizePost,
 }
