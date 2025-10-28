@@ -11,6 +11,7 @@
     "typecheck": "echo 'no types configured'",
     "lint": "echo 'no lint configured'",
     "format": "echo 'no formatter configured'",
+    "test": "bun test",
     "deploy": "cross-env GITHUB_PAGES=1 npm run build && gh-pages -d dist"
   },
   "dependencies": {

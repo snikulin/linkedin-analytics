@@ -17,3 +17,14 @@ db.version(3).stores({
   followersDaily: '++id,datasetId',
   followersDemographics: '++id,datasetId',
 })
+
+db.version(4).stores({
+  datasets: '++id,name,createdAt',
+  mappings: '++id,datasetId',
+  views: '++id,name',
+  posts: '++id,datasetId,activityId,contentType',
+  daily: '++id,datasetId',
+  followersDaily: '++id,datasetId',
+  followersDemographics: '++id,datasetId',
+  postSnapshots: '++id,activityId,datasetId,bucket,observedAt',
+})

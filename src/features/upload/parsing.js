@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx'
 import { deriveContentType } from '../../lib/contentClassification'
+import { deriveActivityTimestamp, extractActivityId } from '../../lib/linkedinIds'
+import { composePostText, computeFingerprint } from '../../lib/postFingerprint'
 
 const KNOWN_POST_HEADERS = [
   'post title', 'post link', 'post type', 'posted by', 'created date',
@@ -124,11 +126,20 @@ function normalizePost(rec) {
   const h = (k) => rec[k]
   const rawPostType = h('post type') ?? h('type') ?? null
   const rawContentType = h('content type') ?? null
+  const rawLink = h('post link') ?? h('link') ?? null
+  const rawIdentifier = rawLink ?? h('post id') ?? h('id') ?? null
+  const activityTimestamp = deriveActivityTimestamp(rawIdentifier)
+  const activityId = extractActivityId(rawIdentifier)
+  const fallbackDate = parseDate(h('created date') ?? h('date'))
+  const fullText = composePostText(rec) || (h('post title') ?? h('title') ?? '')
+  const fingerprint = computeFingerprint(fullText, rawPostType ?? rawContentType)
   const out = {
     title: h('post title') ?? h('title') ?? null,
-    link: h('post link') ?? h('link') ?? null,
+    link: rawLink,
     type: rawPostType ?? rawContentType,
-    createdAt: parseDate(h('created date') ?? h('date')),
+    createdAt: activityTimestamp ?? fallbackDate,
+    activityId: activityId ?? null,
+    fullText,
     impressions: parseNumber(h('impressions')) ?? 0,
     likes: parseNumber(h('likes')) ?? 0,
     comments: parseNumber(h('comments')) ?? 0,
@@ -146,6 +157,8 @@ function normalizePost(rec) {
     title: out.title,
     contentTypeColumn: rawContentType,
   })
+
+  Object.assign(out, fingerprint)
   return out
 }
 
@@ -273,4 +286,8 @@ export async function parseFiles(files) {
     }
   }
   return { posts, daily, followersDaily, followersDemographics }
+}
+
+export const __uploadTestHelpers = {
+  normalizePost,
 }
