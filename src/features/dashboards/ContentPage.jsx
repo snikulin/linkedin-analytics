@@ -3,6 +3,7 @@ import { getCurrentDataset, getPosts, getDatasetFreshness } from '../../data/rep
 import { fmtInt, fmtPct } from '../../lib/format'
 import { Chart } from '../../components/Chart'
 import { deriveContentType, bucketizeContentType } from '../../lib/contentClassification'
+import { useSearchParams } from 'react-router-dom'
 
 const BUCKET_ORDER = ['Video', 'Jobs', 'Funding', 'Regular']
 
@@ -14,11 +15,17 @@ const SUMMARY_LABELS = {
 }
 
 export function ContentPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [posts, setPosts] = React.useState([])
-  const [sortConfig, setSortConfig] = React.useState({ key: 'postedAt', direction: 'desc' })
-  const [timeFilter, setTimeFilter] = React.useState('all')
-  const [contentTypeFilter, setContentTypeFilter] = React.useState('all')
   const [freshness, setFreshness] = React.useState(null)
+  
+  const sortConfig = React.useMemo(() => ({
+    key: searchParams.get('sort') || 'postedAt',
+    direction: searchParams.get('dir') || 'desc'
+  }), [searchParams])
+  
+  const timeFilter = searchParams.get('time') || 'all'
+  const contentTypeFilter = searchParams.get('content') || 'all'
 
   const referenceDate = React.useMemo(() => {
     if (freshness?.date) {
@@ -112,7 +119,10 @@ export function ContentPage() {
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc'
     }
-    setSortConfig({ key, direction })
+    const newParams = new URLSearchParams(searchParams)
+    newParams.set('sort', key)
+    newParams.set('dir', direction)
+    setSearchParams(newParams)
   }
 
   const sortedPosts = React.useMemo(() => {
@@ -408,7 +418,15 @@ export function ContentPage() {
 
   const TimeFilterButton = ({ filter, label }) => (
     <button
-      onClick={() => setTimeFilter(filter)}
+      onClick={() => {
+        const newParams = new URLSearchParams(searchParams)
+        if (filter === 'all') {
+          newParams.delete('time')
+        } else {
+          newParams.set('time', filter)
+        }
+        setSearchParams(newParams)
+      }}
       className={`px-3 py-1 rounded text-sm ${
         timeFilter === filter
           ? 'bg-slate-600 text-white'
@@ -421,7 +439,15 @@ export function ContentPage() {
 
   const ContentTypeFilterButton = ({ filter, label }) => (
     <button
-      onClick={() => setContentTypeFilter(filter)}
+      onClick={() => {
+        const newParams = new URLSearchParams(searchParams)
+        if (filter === 'all') {
+          newParams.delete('content')
+        } else {
+          newParams.set('content', filter)
+        }
+        setSearchParams(newParams)
+      }}
       className={`px-3 py-1 rounded text-sm ${
         contentTypeFilter === filter
           ? 'bg-slate-600 text-white'

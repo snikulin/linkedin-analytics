@@ -2,6 +2,7 @@ import React from 'react'
 import { getCurrentDataset, getFollowersDaily, getFollowersDemographics, getDatasetFreshness } from '../../data/repo'
 import { fmtInt } from '../../lib/format'
 import { Chart } from '../../components/Chart'
+import { useSearchParams } from 'react-router-dom'
 
 const TIME_PERIODS = {
   '7d': { label: '7 days', days: 7 },
@@ -209,14 +210,16 @@ function DemographicsChart({ demographics, categoryType }) {
 }
 
 export function FollowersPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [metrics, setMetrics] = React.useState(null)
   const [previousMetrics, setPreviousMetrics] = React.useState(null)
   const [series, setSeries] = React.useState(null)
-  const [timePeriod, setTimePeriod] = React.useState('30d')
-  const [granularity, setGranularity] = React.useState('daily')
   const [followersDaily, setFollowersDaily] = React.useState([])
   const [followersDemographics, setFollowersDemographics] = React.useState([])
   const [freshness, setFreshness] = React.useState(null)
+  
+  const timePeriod = searchParams.get('period') || '30d'
+  const granularity = searchParams.get('granularity') || 'daily'
 
   const referenceDate = React.useMemo(() => {
     if (freshness?.date) {
@@ -369,8 +372,24 @@ export function FollowersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-lg font-medium">Followers Analytics</h2>
         <div className="flex flex-col sm:flex-row gap-3">
-          <TimePeriodSelector period={timePeriod} onChange={setTimePeriod} />
-          <GranularitySelector granularity={granularity} onChange={setGranularity} />
+          <TimePeriodSelector period={timePeriod} onChange={(period) => {
+            const newParams = new URLSearchParams(searchParams)
+            if (period === '30d') {
+              newParams.delete('period')
+            } else {
+              newParams.set('period', period)
+            }
+            setSearchParams(newParams)
+          }} />
+          <GranularitySelector granularity={granularity} onChange={(granularity) => {
+            const newParams = new URLSearchParams(searchParams)
+            if (granularity === 'daily') {
+              newParams.delete('granularity')
+            } else {
+              newParams.set('granularity', granularity)
+            }
+            setSearchParams(newParams)
+          }} />
         </div>
       </div>
       {freshness?.display && (

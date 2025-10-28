@@ -3,6 +3,7 @@ import { getCurrentDataset, getPosts, getDaily, getDatasetFreshness } from '../.
 import { median } from '../../lib/stats'
 import { fmtInt, fmtPct } from '../../lib/format'
 import { Chart } from '../../components/Chart'
+import { useSearchParams } from 'react-router-dom'
 
 const TIME_PERIODS = {
   '7d': { label: '7 days', days: 7 },
@@ -450,14 +451,16 @@ function RecentActivityFeed({ posts }) {
 }
 
 export function OverviewPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [metrics, setMetrics] = React.useState(null)
   const [previousMetrics, setPreviousMetrics] = React.useState(null)
   const [series, setSeries] = React.useState(null)
-  const [timePeriod, setTimePeriod] = React.useState('30d')
   const [insights, setInsights] = React.useState([])
   const [posts, setPosts] = React.useState([])
   const [drillDownModal, setDrillDownModal] = React.useState({ isOpen: false, metric: null })
   const [freshness, setFreshness] = React.useState(null)
+  
+  const timePeriod = searchParams.get('period') || '30d'
 
   const referenceDate = React.useMemo(() => {
     if (freshness?.date) {
@@ -632,7 +635,15 @@ export function OverviewPage() {
     <div className="space-y-4 sm:space-y-6 overview-dashboard">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-lg font-medium">Overview</h2>
-        <TimePeriodSelector period={timePeriod} onChange={setTimePeriod} />
+        <TimePeriodSelector period={timePeriod} onChange={(period) => {
+          const newParams = new URLSearchParams(searchParams)
+          if (period === '30d') {
+            newParams.delete('period')
+          } else {
+            newParams.set('period', period)
+          }
+          setSearchParams(newParams)
+        }} />
       </div>
       {freshness?.display && (
         <p className="text-xs text-slate-500">
