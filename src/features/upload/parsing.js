@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { deriveContentType } from '../../lib/contentClassification'
 import { deriveActivityTimestamp, extractActivityId } from '../../lib/linkedinIds'
 import { composePostText, computeFingerprint } from '../../lib/postFingerprint'
@@ -83,10 +83,18 @@ function scoreHeaders(headers, known) {
   return score
 }
 
-function sheetToRows(ws) {
-  // Read sheet as 2D array for header detection
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true })
+async function sheetToRows(worksheet) {
+  // Read worksheet as 2D array for header detection
+  const rows = []
+  await worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    const values = row.values
+    if (values && values.length > 0) {
+      rows.push(Array.isArray(values) ? values : [values])
+    }
+  })
+  
   if (!rows.length) return { headers: [], data: [] }
+  
   // Find best header row
   let bestIdx = 0
   let bestScore = -1
@@ -255,6 +263,64 @@ function normalizeFollowersDemographics(rec, sheetName) {
   }
 }
 
+function validateFile(file) {
+  // Validate file type and size to mitigate security risks
+  const allowedTypes = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'text/csv',
+    'application/csv'
+  ]
+  const maxSize = 50 * 1024 * 1024 // 50MB limit
+  
+  if (!allowedTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls|csv)$/i)) {
+    throw new Error(`Invalid file type: ${file.type}. Only Excel and CSV files are allowed.`)
+  }
+  
+  if (file.size > maxSize) {
+    throw new Error(`File too large: ${file.size} bytes. Maximum size is 50MB.`)
+  }
+  
+  return true
+}
+
+async function parseCSV(file) {
+  // For CSV files, we'll use a simple text parser since ExcelJS doesn't handle CSV as well
+  const text = await file.text()
+  const lines = text.split('\n').filter(line => line.trim())
+  if (lines.length === 0) return { headers: [], data: [] }
+  
+  // Parse CSV manually (simple approach)
+  const parseCSVRow = (line) => {
+    const result = []
+    let current = ''
+    let inQuotes = false
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+      if (char === '"') {
+        inQuotes = !inQuotes
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim())
+        current = ''
+      } else {
+        current += char
+      }
+    }
+    result.push(current.trim())
+    return result
+  }
+  
+  const rows = lines.map(parseCSVRow)
+  if (rows.length === 0) return { headers: [], data: [] }
+  
+  const headers = rows[0].map(normalizeHeader)
+  const dataRows = rows.slice(1)
+  const data = dataRows.map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]])))
+  
+  return { headers, data }
+}
+
 export async function parseFiles(files) {
   const posts = []
   const daily = []
@@ -262,27 +328,79 @@ export async function parseFiles(files) {
   const followersDemographics = []
 
   for (const file of files) {
-    const ab = await file.arrayBuffer()
-    const wb = XLSX.read(ab, { type: 'array', cellDates: true, cellNF: false, cellText: false })
-    for (const sheetName of wb.SheetNames) {
-      const ws = wb.Sheets[sheetName]
-      const { headers, data } = sheetToRows(ws)
-      if (!headers.length || !data.length) continue
-      const kind = classifySheet(headers)
-      if (kind === 'posts') {
-        for (const rec of data) posts.push(normalizePost(rec))
-      } else if (kind === 'daily') {
-        for (const rec of data) daily.push(normalizeDaily(rec))
-      } else if (kind === 'followers_daily') {
-        for (const rec of data) followersDaily.push(normalizeFollowersDaily(rec))
-      } else if (kind === 'followers_demographics') {
-        for (const rec of data) {
-          const normalized = normalizeFollowersDemographics(rec, sheetName)
-          if (normalized.categoryType !== 'unknown') {
-            followersDemographics.push(normalized)
+    try {
+      // Validate file before processing
+      validateFile(file)
+      
+      let workbook
+      const isCSV = file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/csv'
+      
+      if (isCSV) {
+        // Handle CSV files
+        const { headers, data } = await parseCSV(file)
+        if (!headers.length || !data.length) continue
+        
+        // Limit data size to prevent DoS
+        if (data.length > 100000) {
+          console.warn(`CSV file has too many rows (${data.length}), limiting to 100,000`)
+          data.length = 100000
+        }
+        
+        const kind = classifySheet(headers)
+        if (kind === 'posts') {
+          for (const rec of data) posts.push(normalizePost(rec))
+        } else if (kind === 'daily') {
+          for (const rec of data) daily.push(normalizeDaily(rec))
+        } else if (kind === 'followers_daily') {
+          for (const rec of data) followersDaily.push(normalizeFollowersDaily(rec))
+        } else if (kind === 'followers_demographics') {
+          for (const rec of data) {
+            const normalized = normalizeFollowersDemographics(rec, 'CSV')
+            if (normalized.categoryType !== 'unknown') {
+              followersDemographics.push(normalized)
+            }
+          }
+        }
+        continue
+      }
+      
+      // Handle Excel files with ExcelJS
+      const ab = await file.arrayBuffer()
+      workbook = new ExcelJS.Workbook()
+      await workbook.xlsx.load(ab)
+      
+      for (const worksheet of workbook.worksheets) {
+        if (!worksheet) continue
+        
+        const { headers, data } = await sheetToRows(worksheet)
+        if (!headers.length || !data.length) continue
+        
+        // Limit data size to prevent DoS
+        if (data.length > 100000) {
+          console.warn(`Worksheet ${worksheet.name} has too many rows (${data.length}), limiting to 100,000`)
+          data.length = 100000
+        }
+        
+        const kind = classifySheet(headers)
+        if (kind === 'posts') {
+          for (const rec of data) posts.push(normalizePost(rec))
+        } else if (kind === 'daily') {
+          for (const rec of data) daily.push(normalizeDaily(rec))
+        } else if (kind === 'followers_daily') {
+          for (const rec of data) followersDaily.push(normalizeFollowersDaily(rec))
+        } else if (kind === 'followers_demographics') {
+          for (const rec of data) {
+            const normalized = normalizeFollowersDemographics(rec, worksheet.name)
+            if (normalized.categoryType !== 'unknown') {
+              followersDemographics.push(normalized)
+            }
           }
         }
       }
+    } catch (error) {
+      console.error('Error processing file:', file.name, error)
+      // Continue processing other files instead of failing completely
+      continue
     }
   }
   return { posts, daily, followersDaily, followersDemographics }

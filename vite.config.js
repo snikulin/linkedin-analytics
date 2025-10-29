@@ -28,6 +28,7 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           navigateFallbackDenylist: [/^\/api\//],
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4MB limit to accommodate ExcelJS
         },
       })
     ].filter(Boolean),
