@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs'
+import * as XLSX from 'xlsx'
 import { deriveContentType } from '../../lib/contentClassification'
 import { deriveActivityTimestamp, extractActivityId } from '../../lib/linkedinIds'
 import { composePostText, computeFingerprint } from '../../lib/postFingerprint'
@@ -83,31 +83,25 @@ function scoreHeaders(headers, known) {
   return score
 }
 
-async function sheetToRows(worksheet) {
-  // Read worksheet as 2D array for header detection
-  const rows = []
-  await worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    const values = row.values
-    if (values && values.length > 0) {
-      rows.push(Array.isArray(values) ? values : [values])
-    }
-  })
+function sheetToRows(worksheet) {
+  // Convert worksheet to JSON with raw values to preserve data types
+  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true })
   
-  if (!rows.length) return { headers: [], data: [] }
+  if (!jsonData.length) return { headers: [], data: [] }
   
   // Find best header row
   let bestIdx = 0
   let bestScore = -1
-  for (let i = 0; i < Math.min(rows.length, 10); i++) {
-    const headers = rows[i]
+  for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
+    const headers = jsonData[i]
     const score = Math.max(scoreHeaders(headers, KNOWN_POST_HEADERS), scoreHeaders(headers, KNOWN_DAILY_HEADERS))
     if (score > bestScore) {
       bestScore = score
       bestIdx = i
     }
   }
-  const headers = rows[bestIdx].map(normalizeHeader)
-  const dataRows = rows.slice(bestIdx + 1)
+  const headers = jsonData[bestIdx].map(normalizeHeader)
+  const dataRows = jsonData.slice(bestIdx + 1)
   const data = dataRows.map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]])))
   return { headers, data }
 }
@@ -364,20 +358,20 @@ export async function parseFiles(files) {
         continue
       }
       
-      // Handle Excel files with ExcelJS
+      // Handle Excel files with SheetJS
       const ab = await file.arrayBuffer()
-      workbook = new ExcelJS.Workbook()
-      await workbook.xlsx.load(ab)
+      workbook = XLSX.read(ab, { type: 'array' })
       
-      for (const worksheet of workbook.worksheets) {
+      for (const sheetName of workbook.SheetNames) {
+        const worksheet = workbook.Sheets[sheetName]
         if (!worksheet) continue
         
-        const { headers, data } = await sheetToRows(worksheet)
+        const { headers, data } = sheetToRows(worksheet)
         if (!headers.length || !data.length) continue
         
         // Limit data size to prevent DoS
         if (data.length > 100000) {
-          console.warn(`Worksheet ${worksheet.name} has too many rows (${data.length}), limiting to 100,000`)
+          console.warn(`Worksheet ${sheetName} has too many rows (${data.length}), limiting to 100,000`)
           data.length = 100000
         }
         
@@ -390,7 +384,7 @@ export async function parseFiles(files) {
           for (const rec of data) followersDaily.push(normalizeFollowersDaily(rec))
         } else if (kind === 'followers_demographics') {
           for (const rec of data) {
-            const normalized = normalizeFollowersDemographics(rec, worksheet.name)
+            const normalized = normalizeFollowersDemographics(rec, sheetName)
             if (normalized.categoryType !== 'unknown') {
               followersDemographics.push(normalized)
             }
