@@ -17,19 +17,27 @@ const SUMMARY_LABELS = {
 }
 
 export function ContentPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [posts, setPosts] = React.useState([])
-  const [freshness, setFreshness] = React.useState(null)
+   const [searchParams, setSearchParams] = useSearchParams()
+   const [posts, setPosts] = React.useState([])
+   const [freshness, setFreshness] = React.useState(null)
+   const searchInputRef = React.useRef()
   
   const sortConfig = React.useMemo(() => ({
     key: searchParams.get('sort') || 'postedAt',
     direction: searchParams.get('dir') || 'desc'
   }), [searchParams])
   
-  const timeFilter = searchParams.get('time') || 'all'
-  const contentTypeFilter = searchParams.get('content') || 'all'
+   const timeFilter = searchParams.get('time') || 'all'
+   const contentTypeFilter = searchParams.get('content') || 'all'
+   const searchTerm = searchParams.get('search') || ''
 
-  const referenceDate = React.useMemo(() => {
+   React.useEffect(() => {
+     if (searchInputRef.current) {
+       searchInputRef.current.value = searchTerm
+     }
+   }, [searchTerm])
+
+   const referenceDate = React.useMemo(() => {
     if (freshness?.date) {
       return new Date(freshness.date)
     }
@@ -104,19 +112,25 @@ export function ContentPage() {
     })
   }, [posts, timeFilter, getCutoffDate, getReferenceDate])
 
-  const contentFilteredPosts = React.useMemo(() => {
-    if (contentTypeFilter === 'all') return timeFilteredPosts
-    const filterMap = {
-      video: 'Video',
-      jobs: 'Jobs',
-      funding: 'Funding',
-      newsletter: 'Newsletter',
-      regular: 'Regular',
-    }
-    const targetBucket = filterMap[contentTypeFilter]
-    if (!targetBucket) return timeFilteredPosts
-    return timeFilteredPosts.filter((post) => post.bucket === targetBucket)
-  }, [timeFilteredPosts, contentTypeFilter])
+   const contentFilteredPosts = React.useMemo(() => {
+     if (contentTypeFilter === 'all') return timeFilteredPosts
+     const filterMap = {
+       video: 'Video',
+       jobs: 'Jobs',
+       funding: 'Funding',
+       newsletter: 'Newsletter',
+       regular: 'Regular',
+     }
+     const targetBucket = filterMap[contentTypeFilter]
+     if (!targetBucket) return timeFilteredPosts
+     return timeFilteredPosts.filter((post) => post.bucket === targetBucket)
+   }, [timeFilteredPosts, contentTypeFilter])
+
+   const searchFilteredPosts = React.useMemo(() => {
+     if (!searchTerm) return contentFilteredPosts
+     const term = searchTerm.toLowerCase()
+     return contentFilteredPosts.filter(post => post.title.toLowerCase().includes(term))
+   }, [contentFilteredPosts, searchTerm])
 
   const handleSort = (key) => {
     let direction = 'asc'
@@ -129,33 +143,33 @@ export function ContentPage() {
     setSearchParams(newParams)
   }
 
-  const sortedPosts = React.useMemo(() => {
-    if (!sortConfig.key) return contentFilteredPosts
+   const sortedPosts = React.useMemo(() => {
+     if (!sortConfig.key) return searchFilteredPosts
 
-    return [...contentFilteredPosts].sort((a, b) => {
-      let aValue = a[sortConfig.key]
-      let bValue = b[sortConfig.key]
+     return [...searchFilteredPosts].sort((a, b) => {
+       let aValue = a[sortConfig.key]
+       let bValue = b[sortConfig.key]
 
-      // Handle null/undefined values - sort them last
-      if (aValue == null && bValue == null) return 0
-      if (aValue == null) return 1
-      if (bValue == null) return -1
+       // Handle null/undefined values - sort them last
+       if (aValue == null && bValue == null) return 0
+       if (aValue == null) return 1
+       if (bValue == null) return -1
 
-      // Specific handling for date strings
-      if (sortConfig.key === 'postedAt') {
-        aValue = new Date(aValue)
-        bValue = new Date(bValue)
-      }
+       // Specific handling for date strings
+       if (sortConfig.key === 'postedAt') {
+         aValue = new Date(aValue)
+         bValue = new Date(bValue)
+       }
 
-      if (aValue < bValue) {
-        return sortConfig.direction === 'asc' ? -1 : 1
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'asc' ? 1 : -1
-      }
-      return 0
-    })
-  }, [contentFilteredPosts, sortConfig])
+       if (aValue < bValue) {
+         return sortConfig.direction === 'asc' ? -1 : 1
+       }
+       if (aValue > bValue) {
+         return sortConfig.direction === 'asc' ? 1 : -1
+       }
+       return 0
+     })
+   }, [searchFilteredPosts, sortConfig])
 
   const bucketStats = React.useMemo(() => {
     const base = Object.fromEntries(
@@ -599,15 +613,46 @@ export function ContentPage() {
           <TimeFilterButton filter="1month" label="Past month" />
           <TimeFilterButton filter="all" label="All time" />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-slate-400">Content filter:</span>
-           <ContentTypeFilterButton filter="all" label="All formats" />
-           <ContentTypeFilterButton filter="video" label="Video only" />
-           <ContentTypeFilterButton filter="jobs" label="Jobs only" />
-           <ContentTypeFilterButton filter="funding" label="Funding only" />
-           <ContentTypeFilterButton filter="newsletter" label="Newsletter only" />
-           <ContentTypeFilterButton filter="regular" label="Regular only" />
-        </div>
+         <div className="flex flex-wrap items-center gap-2">
+           <span className="text-sm text-slate-400">Content filter:</span>
+            <ContentTypeFilterButton filter="all" label="All formats" />
+            <ContentTypeFilterButton filter="video" label="Video only" />
+            <ContentTypeFilterButton filter="jobs" label="Jobs only" />
+            <ContentTypeFilterButton filter="funding" label="Funding only" />
+            <ContentTypeFilterButton filter="newsletter" label="Newsletter only" />
+            <ContentTypeFilterButton filter="regular" label="Regular only" />
+         </div>
+         <div className="flex items-center gap-2">
+           <span className="text-sm text-slate-400">Search:</span>
+           <input
+             type="text"
+             ref={searchInputRef}
+             onBlur={() => {
+               const newParams = new URLSearchParams(searchParams)
+               const value = searchInputRef.current.value.trim()
+               if (value) {
+                 newParams.set('search', value)
+               } else {
+                 newParams.delete('search')
+               }
+               setSearchParams(newParams)
+             }}
+             onKeyDown={(e) => {
+               if (e.key === 'Enter') {
+                 const newParams = new URLSearchParams(searchParams)
+                 const value = searchInputRef.current.value.trim()
+                 if (value) {
+                   newParams.set('search', value)
+                 } else {
+                   newParams.delete('search')
+                 }
+                 setSearchParams(newParams)
+               }
+             }}
+             placeholder="Search posts..."
+             className="px-3 py-1 rounded text-sm bg-slate-800 text-slate-300 border border-slate-700 focus:border-slate-600 focus:outline-none"
+           />
+         </div>
       </section>
 
       {insights.length > 0 && (
@@ -704,12 +749,12 @@ export function ContentPage() {
         </section>
       )}
 
-      <section className="space-y-2">
-        <h3 className="font-medium">
-          Chronological View ({sortedPosts.length} posts shown)
-        </h3>
-        <Table rows={sortedPosts} />
-      </section>
+       <section className="space-y-2">
+         <h3 className="font-medium">
+           Chronological View ({searchFilteredPosts.length} posts shown)
+         </h3>
+         <Table rows={sortedPosts} />
+       </section>
     </div>
   )
 }
