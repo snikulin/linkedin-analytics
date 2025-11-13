@@ -5,6 +5,7 @@ import { fmtInt, fmtPct } from '../../lib/format'
 import { Chart } from '../../components/Chart'
 import { deriveContentType, bucketizeContentType } from '../../lib/contentClassification'
 import { useSearchParams } from 'react-router-dom'
+import { Tabs, Tab } from '../../components/ui/tabs'
 
 const BUCKET_ORDER = ['Video', 'Jobs', 'Funding', 'Newsletter', 'Regular']
 
@@ -533,7 +534,7 @@ export function ContentPage() {
 
   const TopPostsList = ({ title, posts }) => (
     <div className="rounded border border-slate-800 p-4">
-      <h4 className="font-medium mb-3">{title}</h4>
+      {title && <h4 className="font-medium mb-3">{title}</h4>}
       {posts.length === 0 ? (
         <div className="text-sm text-slate-400">No posts in this segment for the selected period.</div>
       ) : (
@@ -738,14 +739,15 @@ export function ContentPage() {
       )}
 
       {topPostsByBucket.length > 0 && (
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {topPostsByBucket.map(({ bucket, posts }) => (
-            <TopPostsList
-              key={bucket}
-              title={`Top ${bucket} Posts`}
-              posts={posts}
-            />
-          ))}
+        <section>
+          <h3 className="font-medium mb-4">Top Posts by Content Type</h3>
+          <Tabs>
+            {topPostsByBucket.map(({ bucket, posts }) => (
+              <Tab key={bucket} title={`Top ${bucket} Posts`}>
+                <TopPostsList posts={posts} />
+              </Tab>
+            ))}
+          </Tabs>
         </section>
       )}
 
