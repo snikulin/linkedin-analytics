@@ -6,6 +6,7 @@ import { TimingPage } from '../features/dashboards/TimingPage'
 import { ContentPage } from '../features/dashboards/ContentPage'
 import { FollowersPage } from '../features/dashboards/FollowersPage'
 import { PostDetailPage } from '../features/posts/PostDetailPage'
+import { SettingsPage } from '../features/settings/SettingsPage'
 
 import { getCurrentDatasetId } from '../data/repo'
 
@@ -39,25 +40,27 @@ export function App() {
       <header className="border-b border-slate-700">
         <div className="container mx-auto px-4 py-3 flex items-center gap-3">
           <h1 className="font-semibold text-slate-100">LinkedIn Analytics</h1>
-          <div className="flex gap-2 ml-auto">
-            <NavLink to="/upload" label="Upload" />
-            <NavLink to="/overview" label="Overview" />
-            <NavLink to="/followers" label="Followers" />
-            <NavLink to="/timing" label="Timing" />
-            <NavLink to="/content" label="Content" />
+           <div className="flex gap-2 ml-auto">
+             <NavLink to="/upload" label="Upload" />
+             <NavLink to="/overview" label="Overview" />
+             <NavLink to="/followers" label="Followers" />
+             <NavLink to="/timing" label="Timing" />
+             <NavLink to="/content" label="Content" />
+             <NavLink to="/settings" label="Settings" />
 
-          </div>
+           </div>
         </div>
       </header>
       <main className="container mx-auto px-4 py-6">
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/upload" element={<UploadPage onReady={() => navigate('/overview')} />} />
-          <Route path="/overview" element={<OverviewPage />} />
-          <Route path="/followers" element={<FollowersPage />} />
-          <Route path="/timing" element={<TimingPage />} />
-          <Route path="/content" element={<ContentPage />} />
-          <Route path="/posts/:postId" element={<PostDetailPage />} />
+           <Route path="/overview" element={<OverviewPage />} />
+           <Route path="/followers" element={<FollowersPage />} />
+           <Route path="/timing" element={<TimingPage />} />
+           <Route path="/content" element={<ContentPage />} />
+           <Route path="/settings" element={<SettingsPage />} />
+           <Route path="/posts/:postId" element={<PostDetailPage />} />
 
         </Routes>
       </main>

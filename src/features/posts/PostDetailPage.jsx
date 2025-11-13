@@ -9,8 +9,9 @@ import {
   getBucketSnapshots,
 } from '../../data/repo'
 import { bucketizeContentType } from '../../lib/contentClassification'
-import { fmtInt, fmtPct } from '../../lib/format'
+import { fmtInt, fmtPct, getLinkedInUrl } from '../../lib/format'
 import { median } from '../../lib/stats'
+import { useSettings } from '../../lib/SettingsContext'
 
 const HOURS_RANGE = 168
 
@@ -269,6 +270,7 @@ export function PostDetailPage() {
   const [cohortSnapshots, setCohortSnapshots] = React.useState([])
   const [peerPosts, setPeerPosts] = React.useState([])
   const [loading, setLoading] = React.useState(true)
+  const { companyId } = useSettings()
 
   React.useEffect(() => {
     let cancelled = false
@@ -338,7 +340,7 @@ export function PostDetailPage() {
         </div>
         {post.link && (
           <a
-            href={post.link}
+            href={getLinkedInUrl(post.link, companyId)}
             target="_blank"
             rel="noreferrer"
             className="text-sky-400 text-sm border border-sky-500 px-3 py-1 rounded hover:bg-sky-500/10"

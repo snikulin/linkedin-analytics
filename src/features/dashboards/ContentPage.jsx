@@ -1,10 +1,11 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { getCurrentDataset, getPosts, getDatasetFreshness } from '../../data/repo'
-import { fmtInt, fmtPct } from '../../lib/format'
+import { fmtInt, fmtPct, getLinkedInUrl } from '../../lib/format'
 import { Chart } from '../../components/Chart'
 import { deriveContentType, bucketizeContentType } from '../../lib/contentClassification'
 import { useSearchParams } from 'react-router-dom'
+import { useSettings } from '../../lib/SettingsContext'
 import { Tabs, Tab } from '../../components/ui/tabs'
 
 const BUCKET_ORDER = ['Video', 'Jobs', 'Funding', 'Newsletter', 'Regular']
@@ -18,10 +19,11 @@ const SUMMARY_LABELS = {
 }
 
 export function ContentPage() {
-   const [searchParams, setSearchParams] = useSearchParams()
-   const [posts, setPosts] = React.useState([])
-   const [freshness, setFreshness] = React.useState(null)
-   const searchInputRef = React.useRef()
+    const [searchParams, setSearchParams] = useSearchParams()
+    const [posts, setPosts] = React.useState([])
+    const [freshness, setFreshness] = React.useState(null)
+    const { companyId } = useSettings()
+    const searchInputRef = React.useRef()
   
   const sortConfig = React.useMemo(() => ({
     key: searchParams.get('sort') || 'postedAt',
@@ -456,17 +458,17 @@ export function ContentPage() {
                 ) : (
                   <span className="truncate">{r.title}</span>
                 )}
-                {r.link && (
-                  <a
-                    href={r.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-slate-500 ml-2"
-                    aria-label="Open on LinkedIn"
-                  >
-                    ↗
-                  </a>
-                )}
+                 {r.link && (
+                   <a
+                     href={getLinkedInUrl(r.link, companyId)}
+                     target="_blank"
+                     rel="noreferrer"
+                     className="text-xs text-slate-500 ml-2"
+                     aria-label="Open on LinkedIn"
+                   >
+                     ↗
+                   </a>
+                 )}
                 {r.contentType && (
                   <div className="mt-1">
                     <span className="inline-flex items-center text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">
@@ -552,7 +554,7 @@ export function ContentPage() {
                     </Link>
                   ) : post.link ? (
                     <a
-                      href={post.link}
+                      href={getLinkedInUrl(post.link, companyId)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-sm text-sky-400 hover:underline truncate block"
@@ -564,7 +566,7 @@ export function ContentPage() {
                   )}
                   {post.link && (
                     <a
-                      href={post.link}
+                      href={getLinkedInUrl(post.link, companyId)}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs text-slate-500"
