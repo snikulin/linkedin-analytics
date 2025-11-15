@@ -3,7 +3,7 @@ import { bucketizeContentType } from '../lib/contentClassification'
 
 const CURRENT_DATASET_KEY = 'linkedin-analytics-current-dataset-id'
 
-export async function saveDataset(name, { posts = [], daily = [], followersDaily = [], followersDemographics = [] }, isSampleData = false) {
+export async function saveDataset(name, { posts = [], daily = [], followersDaily = [], followersDemographics = [], postMetrics = [] }, isSampleData = false) {
   const datasetId = await db.transaction('rw', db.datasets, db.posts, db.daily, db.followersDaily, db.followersDemographics, db.postSnapshots, async () => {
     let id
 
@@ -57,6 +57,10 @@ export async function saveDataset(name, { posts = [], daily = [], followersDaily
       await db.followersDemographics.bulkAdd(followersDemographics.map((f) => ({ ...f, datasetId: id })))
     }
 
+    if (postMetrics.length) {
+      await savePostMetrics(postMetrics, id)
+    }
+
     return id
   })
 
@@ -88,6 +92,19 @@ async function savePostSnapshots(posts, datasetId) {
     .filter(Boolean)
 
   if (!rows.length) return
+  await db.postSnapshots.bulkAdd(rows)
+}
+
+async function savePostMetrics(postMetrics, datasetId) {
+  if (!postMetrics.length) return
+  const rows = postMetrics.map((metric) => ({
+    activityId: metric.activityId,
+    datasetId,
+    observedAt: metric.observedAt,
+    pageViewers: metric.pageViewers,
+    followersGained: metric.followersGained,
+  }))
+
   await db.postSnapshots.bulkAdd(rows)
 }
 

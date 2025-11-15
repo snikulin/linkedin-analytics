@@ -20,6 +20,9 @@ const KNOWN_FOLLOWERS_DEMOGRAPHIC_HEADERS = [
   'industry', 'total followers',
   'company size', 'total followers'
 ]
+const KNOWN_POST_METRICS_HEADERS = [
+  'activity urn', 'collected at', 'page viewers', 'followers gained'
+]
 
 function normalizeHeader(h) {
   return String(h || '')
@@ -111,8 +114,9 @@ function classifySheet(headers) {
   const dailyScore = scoreHeaders(headers, KNOWN_DAILY_HEADERS)
   const followersDailyScore = scoreHeaders(headers, KNOWN_FOLLOWERS_DAILY_HEADERS)
   const followersDemographicScore = scoreHeaders(headers, KNOWN_FOLLOWERS_DEMOGRAPHIC_HEADERS)
+  const postMetricsScore = scoreHeaders(headers, KNOWN_POST_METRICS_HEADERS)
 
-  const maxScore = Math.max(postScore, dailyScore, followersDailyScore, followersDemographicScore)
+  const maxScore = Math.max(postScore, dailyScore, followersDailyScore, followersDemographicScore, postMetricsScore)
 
   if (maxScore === 0) return 'unknown'
 
@@ -120,6 +124,7 @@ function classifySheet(headers) {
   if (dailyScore === maxScore) return 'daily'
   if (followersDailyScore === maxScore) return 'followers_daily'
   if (followersDemographicScore === maxScore) return 'followers_demographics'
+  if (postMetricsScore === maxScore) return 'post_metrics'
 
   return 'unknown'
 }
@@ -257,6 +262,22 @@ function normalizeFollowersDemographics(rec, sheetName) {
   }
 }
 
+function normalizePostMetrics(rec) {
+  const activityId = extractActivityId(rec['activity urn'])
+  const observedAt = parseDate(rec['collected at'])
+  const pageViewers = parseNumber(rec['page viewers'])
+  const followersGained = parseNumber(rec['followers gained'])
+
+  if (!activityId || !observedAt) return null
+
+  return {
+    activityId,
+    observedAt,
+    pageViewers,
+    followersGained
+  }
+}
+
 function validateFile(file) {
   // Validate file type and size to mitigate security risks
   const allowedTypes = [
@@ -320,26 +341,27 @@ export async function parseFiles(files) {
   const daily = []
   const followersDaily = []
   const followersDemographics = []
+  const postMetrics = []
 
   for (const file of files) {
     try {
       // Validate file before processing
       validateFile(file)
-      
+
       let workbook
       const isCSV = file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/csv'
-      
+
       if (isCSV) {
         // Handle CSV files
         const { headers, data } = await parseCSV(file)
         if (!headers.length || !data.length) continue
-        
+
         // Limit data size to prevent DoS
         if (data.length > 100000) {
           console.warn(`CSV file has too many rows (${data.length}), limiting to 100,000`)
           data.length = 100000
         }
-        
+
         const kind = classifySheet(headers)
         if (kind === 'posts') {
           for (const rec of data) posts.push(normalizePost(rec))
@@ -354,27 +376,32 @@ export async function parseFiles(files) {
               followersDemographics.push(normalized)
             }
           }
+        } else if (kind === 'post_metrics') {
+          for (const rec of data) {
+            const normalized = normalizePostMetrics(rec)
+            if (normalized) postMetrics.push(normalized)
+          }
         }
         continue
       }
-      
+
       // Handle Excel files with SheetJS
       const ab = await file.arrayBuffer()
       workbook = XLSX.read(ab, { type: 'array' })
-      
+
       for (const sheetName of workbook.SheetNames) {
         const worksheet = workbook.Sheets[sheetName]
         if (!worksheet) continue
-        
+
         const { headers, data } = sheetToRows(worksheet)
         if (!headers.length || !data.length) continue
-        
+
         // Limit data size to prevent DoS
         if (data.length > 100000) {
           console.warn(`Worksheet ${sheetName} has too many rows (${data.length}), limiting to 100,000`)
           data.length = 100000
         }
-        
+
         const kind = classifySheet(headers)
         if (kind === 'posts') {
           for (const rec of data) posts.push(normalizePost(rec))
@@ -389,6 +416,11 @@ export async function parseFiles(files) {
               followersDemographics.push(normalized)
             }
           }
+        } else if (kind === 'post_metrics') {
+          for (const rec of data) {
+            const normalized = normalizePostMetrics(rec)
+            if (normalized) postMetrics.push(normalized)
+          }
         }
       }
     } catch (error) {
@@ -397,7 +429,7 @@ export async function parseFiles(files) {
       continue
     }
   }
-  return { posts, daily, followersDaily, followersDemographics }
+  return { posts, daily, followersDaily, followersDemographics, postMetrics }
 }
 
 export const __uploadTestHelpers = {
