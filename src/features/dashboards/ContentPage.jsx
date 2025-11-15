@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { getCurrentDataset, getPosts, getDatasetFreshness } from '../../data/repo'
+import { getCurrentDataset, getPosts, getDatasetFreshness, getPostSnapshots } from '../../data/repo'
 import { fmtInt, fmtPct, getLinkedInUrl } from '../../lib/format'
 import { Chart } from '../../components/Chart'
 import { deriveContentType, bucketizeContentType } from '../../lib/contentClassification'
@@ -34,18 +34,18 @@ export function ContentPage() {
    const contentTypeFilter = searchParams.get('content') || 'all'
    const searchTerm = searchParams.get('search') || ''
 
-   React.useEffect(() => {
-     if (searchInputRef.current) {
-       searchInputRef.current.value = searchTerm
-     }
-   }, [searchTerm])
+    React.useEffect(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.value = searchTerm
+      }
+    }, [searchTerm])
 
-   const referenceDate = React.useMemo(() => {
-    if (freshness?.date) {
-      return new Date(freshness.date)
-    }
-    return null
-  }, [freshness])
+    const referenceDate = React.useMemo(() => {
+     if (freshness?.date) {
+       return new Date(freshness.date)
+     }
+     return null
+   }, [freshness])
 
   const getReferenceDate = React.useCallback(() => {
     if (referenceDate) {
@@ -54,37 +54,62 @@ export function ContentPage() {
     return new Date()
   }, [referenceDate])
 
-  React.useEffect(() => {
-    (async () => {
-      const ds = await getCurrentDataset()
-      if (!ds) return
-      const [allPosts, freshnessInfo] = await Promise.all([
-        getPosts(ds.id),
-        getDatasetFreshness(ds.id),
-      ])
-
-      setFreshness(freshnessInfo)
-
-      const normalizedPosts = allPosts.map((p) => {
-        const contentType = deriveContentType(p)
-        return {
-          id: p.id,
-          title: p.title || '(untitled)',
-          link: p.link || null,
-          postedAt: p.createdAt || null,
-          impressions: p.impressions || 0,
-          er: p.engagementRate ?? null,
-          likes: p.likes || 0,
-          comments: p.comments || 0,
-          reposts: p.reposts || 0,
-          contentType,
-          bucket: bucketizeContentType(contentType),
+  const getLatestPostMetrics = React.useCallback(async (posts) => {
+    const metricsMap = new Map()
+    for (const post of posts) {
+      if (post.activityId) {
+        const snapshots = await getPostSnapshots(post.activityId)
+        // Sort descending (latest first)
+        const sortedSnapshots = snapshots.sort((a, b) => new Date(b.observedAt) - new Date(a.observedAt))
+        // Find the latest snapshot that has pageViewers or followersGained
+        const latestWithMetrics = sortedSnapshots.find(s => s.pageViewers != null || s.followersGained != null)
+        if (latestWithMetrics) {
+          metricsMap.set(post.activityId, {
+            pageViewers: latestWithMetrics.pageViewers ?? null,
+            followersGained: latestWithMetrics.followersGained ?? null,
+          })
         }
-      })
-
-      setPosts(normalizedPosts)
-    })()
+      }
+    }
+    return metricsMap
   }, [])
+
+   React.useEffect(() => {
+     (async () => {
+       const ds = await getCurrentDataset()
+       if (!ds) return
+       const [allPosts, freshnessInfo] = await Promise.all([
+         getPosts(ds.id),
+         getDatasetFreshness(ds.id),
+       ])
+
+       setFreshness(freshnessInfo)
+
+       const metricsMap = await getLatestPostMetrics(allPosts)
+
+       const normalizedPosts = allPosts.map((p) => {
+         const contentType = deriveContentType(p)
+         const metrics = metricsMap.get(p.activityId) || {}
+         return {
+           id: p.id,
+           title: p.title || '(untitled)',
+           link: p.link || null,
+           postedAt: p.createdAt || null,
+           impressions: p.impressions || 0,
+           er: p.engagementRate ?? null,
+           likes: p.likes || 0,
+           comments: p.comments || 0,
+           reposts: p.reposts || 0,
+           pageViewers: metrics.pageViewers,
+           followersGained: metrics.followersGained,
+           contentType,
+           bucket: bucketizeContentType(contentType),
+         }
+       })
+
+       setPosts(normalizedPosts)
+     })()
+   }, [getLatestPostMetrics])
 
   const getCutoffDate = React.useCallback((filter) => {
     const reference = getReferenceDate()
@@ -428,47 +453,53 @@ export function ContentPage() {
       <table className="w-full text-sm table-fixed">
         <thead className="bg-slate-900">
           <tr>
-            <th className="text-left px-3 py-2 w-1/3">Post</th>
-            <th className="text-left px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/6" onClick={() => handleSort('postedAt')}>
+            <th className="text-left px-3 py-2 w-1/4">Post</th>
+            <th className="text-left px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/8" onClick={() => handleSort('postedAt')}>
               Posted At{getSortIndicator('postedAt')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('impressions')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/16" onClick={() => handleSort('impressions')}>
               Impr{getSortIndicator('impressions')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('er')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/16" onClick={() => handleSort('er')}>
               ER{getSortIndicator('er')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('likes')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/16" onClick={() => handleSort('likes')}>
               Likes{getSortIndicator('likes')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('comments')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/16" onClick={() => handleSort('comments')}>
               Comments{getSortIndicator('comments')}
             </th>
-            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/12" onClick={() => handleSort('reposts')}>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/16" onClick={() => handleSort('reposts')}>
               Reposts{getSortIndicator('reposts')}
+            </th>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/16" onClick={() => handleSort('pageViewers')}>
+              Page Viewers{getSortIndicator('pageViewers')}
+            </th>
+            <th className="text-right px-3 py-2 cursor-pointer hover:bg-slate-800 w-1/16" onClick={() => handleSort('followersGained')}>
+              Followers Gained{getSortIndicator('followersGained')}
             </th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
             <tr key={i} className="border-t border-slate-800">
-              <td className="px-3 py-2 truncate max-w-[300px] w-[300px]">
+              <td className="px-3 py-2 truncate max-w-[250px] w-[250px]">
                 {r.id ? (
                   <Link to={`/posts/${r.id}`} className="text-sky-400 hover:underline truncate">{r.title}</Link>
                 ) : (
                   <span className="truncate">{r.title}</span>
                 )}
-                 {r.link && (
-                   <a
-                     href={getLinkedInUrl(r.link, companyId)}
-                     target="_blank"
-                     rel="noreferrer"
-                     className="text-xs text-slate-500 ml-2"
-                     aria-label="Open on LinkedIn"
-                   >
-                     ↗
-                   </a>
-                 )}
+                  {r.link && (
+                    <a
+                      href={getLinkedInUrl(r.link, companyId)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-slate-500 ml-2"
+                      aria-label="Open on LinkedIn"
+                    >
+                      ↗
+                    </a>
+                  )}
                 {r.contentType && (
                   <div className="mt-1">
                     <span className="inline-flex items-center text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300">
@@ -485,6 +516,8 @@ export function ContentPage() {
               <td className="px-3 py-2 text-right">{fmtInt(r.likes)}</td>
               <td className="px-3 py-2 text-right">{fmtInt(r.comments)}</td>
               <td className="px-3 py-2 text-right">{fmtInt(r.reposts)}</td>
+              <td className="px-3 py-2 text-right">{r.pageViewers != null ? fmtInt(r.pageViewers) : '—'}</td>
+              <td className="px-3 py-2 text-right">{r.followersGained != null ? fmtInt(r.followersGained) : '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -586,6 +619,8 @@ export function ContentPage() {
                 <span>👍 {fmtInt(post.likes)}</span>
                 <span>💬 {fmtInt(post.comments)}</span>
                 <span>🔁 {fmtInt(post.reposts)}</span>
+                {post.pageViewers != null && <span>👁 {fmtInt(post.pageViewers)} viewers</span>}
+                {post.followersGained != null && <span>➕ {fmtInt(post.followersGained)} followers</span>}
               </div>
             </div>
           ))}

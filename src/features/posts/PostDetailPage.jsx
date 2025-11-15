@@ -74,6 +74,8 @@ function buildTimelineSeries(post, snapshots, cohortSnapshots) {
       hours: Number(hoursSince.toFixed(1)),
       impressions: snap.impressions || 0,
       engagement,
+      pageViewers: snap.pageViewers,
+      followersGained: snap.followersGained,
     }
   }
 
@@ -94,7 +96,7 @@ function buildTimelineSeries(post, snapshots, cohortSnapshots) {
     if (!cohortBuckets.has(hours)) {
       cohortBuckets.set(hours, [])
     }
-    cohortBuckets.get(hours).push({ impressions: snap.impressions || 0, engagement })
+    cohortBuckets.get(hours).push({ impressions: snap.impressions || 0, engagement, pageViewers: snap.pageViewers, followersGained: snap.followersGained })
   })
 
   const cohortPoints = Array.from(cohortBuckets.entries())
@@ -103,6 +105,8 @@ function buildTimelineSeries(post, snapshots, cohortSnapshots) {
       hour,
       impressions: median(rows.map((r) => r.impressions)) || 0,
       engagement: median(rows.map((r) => r.engagement)) || 0,
+      pageViewers: median(rows.map((r) => r.pageViewers).filter(v => v != null)) || null,
+      followersGained: median(rows.map((r) => r.followersGained).filter(v => v != null)) || null,
     }))
 
   if (timelinePoints.length === 0 && cohortPoints.length === 0) {
@@ -114,7 +118,7 @@ function buildTimelineSeries(post, snapshots, cohortSnapshots) {
       trigger: 'axis',
     },
     legend: {
-      data: ['Post Impressions', 'Cohort Impressions', 'Post Engagement', 'Cohort Engagement'],
+      data: ['Post Impressions', 'Cohort Impressions', 'Post Engagement', 'Cohort Engagement', 'Post Page Viewers', 'Cohort Page Viewers', 'Post Followers Gained', 'Cohort Followers Gained'],
       textStyle: { color: '#94a3b8' },
     },
     grid: { top: 50, left: 60, right: 60, bottom: 40 },
@@ -160,6 +164,36 @@ function buildTimelineSeries(post, snapshots, cohortSnapshots) {
         itemStyle: { color: '#fb7185' },
         lineStyle: { type: 'dashed' },
         data: cohortPoints.map((p) => [p.hour, p.engagement]),
+      },
+      {
+        name: 'Post Page Viewers',
+        type: 'line',
+        smooth: true,
+        itemStyle: { color: '#10b981' },
+        data: timelinePoints.filter(p => p.pageViewers != null).map((p) => [p.hours, p.pageViewers]),
+      },
+      {
+        name: 'Cohort Page Viewers',
+        type: 'line',
+        smooth: true,
+        itemStyle: { color: '#059669' },
+        lineStyle: { type: 'dashed' },
+        data: cohortPoints.filter(p => p.pageViewers != null).map((p) => [p.hour, p.pageViewers]),
+      },
+      {
+        name: 'Post Followers Gained',
+        type: 'line',
+        smooth: true,
+        itemStyle: { color: '#f59e0b' },
+        data: timelinePoints.filter(p => p.followersGained != null).map((p) => [p.hours, p.followersGained]),
+      },
+      {
+        name: 'Cohort Followers Gained',
+        type: 'line',
+        smooth: true,
+        itemStyle: { color: '#d97706' },
+        lineStyle: { type: 'dashed' },
+        data: cohortPoints.filter(p => p.followersGained != null).map((p) => [p.hour, p.followersGained]),
       },
     ],
   }
@@ -295,10 +329,13 @@ export function PostDetailPage() {
         getBucketSnapshots(bucket, 750),
       ])
 
+      // Sort snapshots descending (latest first) for consistent access
+      const sortedPostHistory = postHistory.sort((a, b) => new Date(b.observedAt) - new Date(a.observedAt))
+
       if (!cancelled) {
         setPost(postRecord)
         setPeerPosts(allPosts)
-        setSnapshots(postHistory)
+        setSnapshots(sortedPostHistory)
         setCohortSnapshots(bucketHistory)
         setLoading(false)
       }
@@ -357,18 +394,20 @@ export function PostDetailPage() {
         </section>
       )}
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { label: 'Impressions', value: fmtInt(post.impressions || 0) },
-          { label: 'Engagement Rate', value: fmtPct(post.engagementRate) },
-          { label: 'Engagements', value: fmtInt((post.likes || 0) + (post.comments || 0) + (post.reposts || 0)) },
-        ].map((card) => (
-          <div key={card.label} className="rounded border border-slate-800 p-4">
-            <div className="text-sm text-slate-400">{card.label}</div>
-            <div className="text-2xl font-semibold text-slate-100">{card.value}</div>
-          </div>
-        ))}
-      </section>
+       <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+         {[
+           { label: 'Impressions', value: fmtInt(post.impressions || 0) },
+           { label: 'Engagement Rate', value: fmtPct(post.engagementRate) },
+           { label: 'Engagements', value: fmtInt((post.likes || 0) + (post.comments || 0) + (post.reposts || 0)) },
+           { label: 'Page Viewers', value: snapshots.length && snapshots.find(s => s.pageViewers != null) ? fmtInt(snapshots.find(s => s.pageViewers != null).pageViewers) : '—' },
+           { label: 'Followers Gained', value: snapshots.length && snapshots.find(s => s.followersGained != null) ? fmtInt(snapshots.find(s => s.followersGained != null).followersGained) : '—' },
+         ].map((card) => (
+           <div key={card.label} className="rounded border border-slate-800 p-4">
+             <div className="text-sm text-slate-400">{card.label}</div>
+             <div className="text-2xl font-semibold text-slate-100">{card.value}</div>
+           </div>
+         ))}
+       </section>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
@@ -447,10 +486,12 @@ export function PostDetailPage() {
                       {formatDate(p.createdAt)} • {bucketizeContentType(p.contentType || 'Regular')}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-slate-300 sm:min-w-[160px]">
-                    <span className="text-slate-200 whitespace-nowrap">{fmtInt(p.impressions || 0)} impr</span>
-                    <span className="text-slate-400 whitespace-nowrap">{fmtPct(p.engagementRate)}</span>
-                  </div>
+                   <div className="flex items-center gap-4 text-sm text-slate-300 sm:min-w-[200px]">
+                     <span className="text-slate-200 whitespace-nowrap">{fmtInt(p.impressions || 0)} impr</span>
+                     <span className="text-slate-400 whitespace-nowrap">{fmtPct(p.engagementRate)}</span>
+                     {p.pageViewers != null && <span className="text-slate-500 whitespace-nowrap">{fmtInt(p.pageViewers)} viewers</span>}
+                     {p.followersGained != null && <span className="text-slate-500 whitespace-nowrap">+{fmtInt(p.followersGained)} followers</span>}
+                   </div>
                 </div>
               </div>
             ))}
